@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 
 const CommitLog = () => {
   const { projectId, project } = useProject();
@@ -42,16 +43,51 @@ const CommitLog = () => {
                         {commit.commitAuthorName}
                       </span>{" "}
                       <span className="inline-flex items-center">
-                        commited
+                        committed
                         <ExternalLink className="ml-1 size-4" />
                       </span>
                     </Link>
                   </div>
                   <span className="font-semibold">{commit.commitMessage}</span>
 
-                  <pre className="mt-2 text-sm leading-6 whitespace-pre-wrap text-gray-500">
-                    {commit.summary}
-                  </pre>
+                  <div className="prose prose-sm mt-2 max-w-none text-gray-600">
+                    <ReactMarkdown
+                      components={{
+                        // Style the bullet points
+                        ul: ({ children }) => (
+                          <ul className="my-2 list-disc space-y-1 pl-5">
+                            {children}
+                          </ul>
+                        ),
+                        li: ({ children }) => (
+                          <li className="text-sm leading-6">{children}</li>
+                        ),
+                        // Style code blocks (inline)
+                        code: ({ children, className }) => {
+                          const isInline = !className;
+                          return isInline ? (
+                            <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-800">
+                              {children}
+                            </code>
+                          ) : (
+                            <code className={className}>{children}</code>
+                          );
+                        },
+                        // Style paragraphs
+                        p: ({ children }) => (
+                          <p className="my-1 text-sm leading-6">{children}</p>
+                        ),
+                        // Style strong/bold text
+                        strong: ({ children }) => (
+                          <strong className="font-semibold text-gray-900">
+                            {children}
+                          </strong>
+                        ),
+                      }}
+                    >
+                      {commit.summary}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </>
             </li>

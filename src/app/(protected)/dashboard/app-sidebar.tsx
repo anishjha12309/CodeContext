@@ -93,7 +93,7 @@ export function AppSideBar() {
             <SidebarMenu>
               {projects?.map((project) => {
                 return (
-                  <SidebarMenuItem key={project.name}>
+                  <SidebarMenuItem key={project.id}>
                     <SidebarMenuButton asChild>
                       <div
                         onClick={() => {
