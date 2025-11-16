@@ -2,8 +2,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Document } from "@langchain/core/documents";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
+  model: "gemini-2.5-flash-lite",
 });
 
 export const aiSummariseCommit = async (diff: string) => {
@@ -64,11 +65,11 @@ export async function summariseCode(doc: Document) {
 }
 
 export async function generateEmbedding(summary: string) {
-  const model = genAI.getGenerativeModel({
+  const embeddingModel = genAI.getGenerativeModel({
     model: "text-embedding-004",
   });
 
-  const result = await model.embedContent(summary);
+  const result = await embeddingModel.embedContent(summary);
   const embedding = result.embedding;
   return embedding.values;
 }

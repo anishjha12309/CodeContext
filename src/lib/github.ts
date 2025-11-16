@@ -101,9 +101,7 @@ export const pollCommits = async (projectId: string) => {
 
   const commitsToCreate = [];
 
-  // Gemini free tier: 10 requests per minute
-  // Process commits with 6 second delay between each (10 per minute)
-  const DELAY_BETWEEN_COMMITS = 6000; // 6 seconds
+  const DELAY_BETWEEN_COMMITS = 6000;
 
   console.log(
     `⚠️  Processing commits with 6s delay to respect Gemini free tier (10 req/min)`,

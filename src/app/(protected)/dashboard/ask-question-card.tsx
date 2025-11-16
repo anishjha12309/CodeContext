@@ -1,5 +1,6 @@
 "use client";
 
+import MDEditor from "@uiw/react-md-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +15,10 @@ import {
 import Image from "next/image";
 import { askQuestion } from "./actions";
 import { readStreamableValue } from "@ai-sdk/rsc";
+import CodeReferences from "./code-references";
+import { api } from "@/trpc/react";
+import { toast } from "sonner";
+import useRefetch from "@/hooks/use-refetch";
 
 const AskQuestionCard = () => {
   const { project } = useProject();
@@ -24,16 +29,19 @@ const AskQuestionCard = () => {
     { fileName: string; sourceCode: string; summary: string }[]
   >([]);
   const [answer, setAnswer] = useState("");
+  const saveAnswer = api.project.saveAnswer.useMutation();
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    setAnswer("");
+    setFilesReferences([]);
     e.preventDefault();
 
     if (!project?.id) return;
 
     setLoading(true);
-    setOpen(true);
 
     const { output, filesReferences } = await askQuestion(question, project.id);
+    setOpen(true);
     setFilesReferences(filesReferences);
     for await (const delta of readStreamableValue(output)) {
       if (delta) {
@@ -42,21 +50,85 @@ const AskQuestionCard = () => {
     }
     setLoading(false);
   };
+  const refetch = useRefetch();
 
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white sm:max-w-[75vw]">
           <DialogHeader>
-            <DialogTitle>
-              <Image src="/logo.png" alt="dionysus" width={60} height={60} />
-            </DialogTitle>
+            <div className="flex items-center gap-2">
+              <DialogTitle>
+                <Image
+                  src="/logo.png"
+                  alt="codeContext"
+                  width={60}
+                  height={60}
+                />
+              </DialogTitle>
+              <Button
+                disabled={saveAnswer.isPending}
+                variant={"outline"}
+                onClick={() => {
+                  saveAnswer.mutate(
+                    {
+                      projectId: project!.id,
+                      question,
+                      answer,
+                      filesReferences,
+                    },
+                    {
+                      onSuccess: () => {
+                        toast.success("Answer saved!");
+                        refetch();
+                      },
+                      onError: () => {
+                        toast.error("Failed to save answer!");
+                      },
+                    },
+                  );
+                }}
+              >
+                Save Answer
+              </Button>
+            </div>
           </DialogHeader>
-          {answer}
-          <h1>Files Reference</h1>
-          {filesReferences.map((file) => {
-            return <span key={file.fileName}>{file.fileName}</span>;
-          })}
+          <div className="h-full max-h-[40vh] overflow-y-auto">
+            <MDEditor.Markdown
+              source={answer}
+              className="text-black"
+              style={{
+                backgroundColor: "white",
+                color: "black",
+              }}
+            />
+            <div className="h-6"></div>
+            <CodeReferences filesReferences={filesReferences} />
+            <style jsx global>{`
+              .w-md-editor-text-pre code,
+              .w-md-editor-text-pre pre,
+              .wmde-markdown code,
+              .wmde-markdown pre {
+                background-color: black !important;
+                color: white !important;
+                border: 1px solid #e5e7eb;
+              }
+              .wmde-markdown {
+                background-color: white !important;
+                color: black !important;
+              }
+            `}</style>
+          </div>
+
+          <Button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+            }}
+            className="bg-black text-white hover:bg-gray-800"
+          >
+            Close
+          </Button>
         </DialogContent>
       </Dialog>
 
@@ -72,7 +144,9 @@ const AskQuestionCard = () => {
               onChange={(e) => setQuestion(e.target.value)}
             />
             <div className="h-4"></div>
-            <Button type="submit">Ask CodeContext!</Button>
+            <Button type="submit" disabled={loading}>
+              Ask CodeContext!
+            </Button>
           </form>
         </CardContent>
       </Card>

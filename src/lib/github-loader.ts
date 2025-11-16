@@ -279,8 +279,8 @@ const generateEmbeddings = async (docs: Document[]) => {
     return [];
   }
 
-  const BATCH_SIZE = 3;
-  const DELAY_BETWEEN_BATCHES = 12000;
+  const BATCH_SIZE = 5;
+  const DELAY_BETWEEN_BATCHES = 4000;
   const embeddings = [];
 
   console.log(

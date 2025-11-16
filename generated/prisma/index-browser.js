@@ -141,6 +141,17 @@ exports.Prisma.ProjectScalarFieldEnum = {
   deletedAt: 'deletedAt'
 };
 
+exports.Prisma.QuestionScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  question: 'question',
+  answer: 'answer',
+  filesReferences: 'filesReferences',
+  projectId: 'projectId',
+  userId: 'userId'
+};
+
 exports.Prisma.UserToProjectScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
@@ -175,6 +186,11 @@ exports.Prisma.SortOrder = {
   desc: 'desc'
 };
 
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
 exports.Prisma.QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -185,10 +201,17 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+
 
 exports.Prisma.ModelName = {
   User: 'User',
   Project: 'Project',
+  Question: 'Question',
   UserToProject: 'UserToProject',
   Commit: 'Commit',
   SourceCodeEmbedding: 'SourceCodeEmbedding'
