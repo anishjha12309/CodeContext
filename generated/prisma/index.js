@@ -211,6 +211,10 @@ const config = {
         "fromEnvVar": null,
         "value": "windows",
         "native": true
+      },
+      {
+        "fromEnvVar": null,
+        "value": "rhel-openssl-3.0.x"
       }
     ],
     "previewFeatures": [
@@ -239,8 +243,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"postgresqlExtensions\"]\n  output          = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider   = \"postgresql\"\n  url        = env(\"DATABASE_URL\")\n  extensions = [vector]\n}\n\nmodel User {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  imageUrl  String?\n  firstName String?\n  lastName  String?\n\n  emailAddress String @unique\n\n  credits        Int             @default(150)\n  userToProjects UserToProject[]\n  questionsAsked Question[]\n}\n\nmodel Project {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  name                 String\n  githubUrl            String\n  deletedAt            DateTime?\n  userToProjects       UserToProject[]\n  commits              Commit[]\n  sourceCodeEmbeddings SourceCodeEmbedding[]\n  savedQuestions       Question[]\n}\n\nmodel Question {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  question String\n  answer   String\n\n  filesReferences Json?\n\n  projectId String\n  project   Project @relation(fields: [projectId], references: [id])\n\n  userId String\n  user   User   @relation(fields: [userId], references: [id])\n}\n\nmodel UserToProject {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId    String\n  projectId String\n\n  user    User    @relation(fields: [userId], references: [id])\n  project Project @relation(fields: [projectId], references: [id])\n\n  @@unique([userId, projectId])\n}\n\nmodel Commit {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  projectId String\n  project   Project @relation(fields: [projectId], references: [id])\n\n  commitMessage      String\n  commitHash         String\n  commitAuthorName   String\n  commitAuthorAvatar String\n  commitDate         DateTime\n  summary            String\n}\n\nmodel SourceCodeEmbedding {\n  id String @id @default(cuid())\n\n  summaryEmbedding Unsupported(\"vector(768)\")?\n  sourceCode       String\n  fileName         String\n  summary          String\n\n  projectId String\n  project   Project @relation(fields: [projectId], references: [id])\n}\n",
-  "inlineSchemaHash": "da697a187542bd566da12144cda1a0967a0cd680c6ecef89ccadf715a3bda418",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider        = \"prisma-client-js\"\n  previewFeatures = [\"postgresqlExtensions\"]\n  output          = \"../generated/prisma\"\n  binaryTargets   = [\"native\", \"rhel-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider   = \"postgresql\"\n  url        = env(\"DATABASE_URL\")\n  extensions = [vector]\n}\n\nmodel User {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  imageUrl  String?\n  firstName String?\n  lastName  String?\n\n  emailAddress String @unique\n\n  credits        Int             @default(150)\n  userToProjects UserToProject[]\n  questionsAsked Question[]\n}\n\nmodel Project {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  name                 String\n  githubUrl            String\n  deletedAt            DateTime?\n  userToProjects       UserToProject[]\n  commits              Commit[]\n  sourceCodeEmbeddings SourceCodeEmbedding[]\n  savedQuestions       Question[]\n}\n\nmodel Question {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  question String\n  answer   String\n\n  filesReferences Json?\n\n  projectId String\n  project   Project @relation(fields: [projectId], references: [id])\n\n  userId String\n  user   User   @relation(fields: [userId], references: [id])\n}\n\nmodel UserToProject {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  userId    String\n  projectId String\n\n  user    User    @relation(fields: [userId], references: [id])\n  project Project @relation(fields: [projectId], references: [id])\n\n  @@unique([userId, projectId])\n}\n\nmodel Commit {\n  id        String   @id @default(cuid())\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  projectId String\n  project   Project @relation(fields: [projectId], references: [id])\n\n  commitMessage      String\n  commitHash         String\n  commitAuthorName   String\n  commitAuthorAvatar String\n  commitDate         DateTime\n  summary            String\n}\n\nmodel SourceCodeEmbedding {\n  id String @id @default(cuid())\n\n  summaryEmbedding Unsupported(\"vector(768)\")?\n  sourceCode       String\n  fileName         String\n  summary          String\n\n  projectId String\n  project   Project @relation(fields: [projectId], references: [id])\n}\n",
+  "inlineSchemaHash": "0fa0010a0e5b572b86fa429f9c2d02f9468d458a0f1494a6ae6c6668e1398046",
   "copyEngine": true
 }
 
@@ -281,6 +285,10 @@ Object.assign(exports, Prisma)
 // file annotations for bundling tools to include these files
 path.join(__dirname, "query_engine-windows.dll.node");
 path.join(process.cwd(), "generated/prisma/query_engine-windows.dll.node")
+
+// file annotations for bundling tools to include these files
+path.join(__dirname, "libquery_engine-rhel-openssl-3.0.x.so.node");
+path.join(process.cwd(), "generated/prisma/libquery_engine-rhel-openssl-3.0.x.so.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
 path.join(process.cwd(), "generated/prisma/schema.prisma")
