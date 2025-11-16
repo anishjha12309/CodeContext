@@ -5,6 +5,22 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  experimental: {
+    serverComponentsExternalPackages: ["@prisma/client", "@prisma/engines"],
+  },
+
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push("@prisma/client");
+    }
+    return config;
+  },
+
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./generated/prisma/**/*"],
+    "/**/*": ["./generated/prisma/**/*"],
+  },
+};
 
 export default config;
