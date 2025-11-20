@@ -36,6 +36,7 @@ const QAPage = () => {
                     height={30}
                     width={30}
                     src={question.user.imageUrl ?? ""}
+                    alt="imageUrl"
                   />
                   <div className="flex flex-col text-left">
                     <div className="flex items-center gap-2">

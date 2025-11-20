@@ -33,9 +33,9 @@ const MeetingsPage = () => {
         {meetings?.map((meeting) => (
           <li
             key={meeting.id}
-            className="flex items-center justify-between gap-x-6 py-5"
+            className="flex flex-col items-start justify-between gap-4 py-5 sm:flex-row sm:items-center"
           >
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <Link
@@ -58,9 +58,16 @@ const MeetingsPage = () => {
                 <p className="truncate">{meeting.issues.length} issues</p>
               </div>
             </div>
-            <div className="flex flex-none items-center gap-x-4">
-              <Link href={`/meetings/${meeting.id}`}>
-                <Button variant="outline" size="sm">
+            <div className="flex w-full flex-none flex-wrap items-center gap-x-4 gap-y-2 sm:w-auto">
+              <Link
+                href={`/meetings/${meeting.id}`}
+                className="flex-1 sm:flex-none"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   View Meeting
                 </Button>
               </Link>
@@ -79,6 +86,7 @@ const MeetingsPage = () => {
                   )
                 }
                 disabled={deleteMeeting.isPending}
+                className="w-full flex-1 sm:w-auto sm:flex-none"
               >
                 Delete Meeting
               </Button>

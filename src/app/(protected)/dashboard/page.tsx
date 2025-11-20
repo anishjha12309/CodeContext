@@ -14,18 +14,18 @@ const DashboardPage = () => {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-y-4">
-        <div className="bg-primary w-fit rounded-md px-4 py-3">
+        <div className="bg-primary w-fit max-w-full rounded-md px-4 py-3">
           <div className="flex items-center">
-            <Github className="size-5 text-white" />
-            <div className="ml-2">
+            <Github className="size-5 shrink-0 text-white" />
+            <div className="ml-2 min-w-0">
               <p className="text-sm font-medium text-white">
                 This project is linked to{" "}
                 <Link
                   href={project?.githubUrl ?? ""}
-                  className="inline-flex items-center text-white/80 hover:underline"
+                  className="inline-flex items-center break-all text-white/80 hover:underline"
                 >
                   {project?.githubUrl}
-                  <ExternalLink className="ml-1 size-4" />
+                  <ExternalLink className="ml-1 size-4 shrink-0" />
                 </Link>
               </p>
             </div>

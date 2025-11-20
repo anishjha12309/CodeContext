@@ -3,7 +3,13 @@
 import { Button } from "@/components/ui/button";
 import useProject from "@/hooks/use-project";
 import { cn } from "@/lib/utils";
-import { Bot, CreditCard, LayoutDashboard, Plus } from "lucide-react";
+import {
+  Bot,
+  CreditCard,
+  LayoutDashboard,
+  Plus,
+  Presentation,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,6 +24,11 @@ const items = [
     title: "Q&A",
     url: "/qa",
     icon: Bot,
+  },
+  {
+    title: "Meetings",
+    url: "/meetings",
+    icon: Presentation,
   },
   {
     title: "Billing",
