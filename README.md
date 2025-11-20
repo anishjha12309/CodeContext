@@ -1,33 +1,57 @@
-<<<<<<< HEAD
-# Create T3 App
-
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
-
-## What's next? How do I make an app with this?
-
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
-
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
-
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
-
-## Learn More
-
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
-
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
-
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
-
-## How do I deploy this?
-
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
-=======
 # CodeContext
->>>>>>> 299084ecba24835d9e305d5cea90f57684e0761d
+
+CodeContext is a developer-focused web application that makes code review clearer, collaborative, and context-rich. It combines a modern Next.js interface, real-time collaboration features, and meeting/transcription capabilities to streamline how teams understand and discuss code.
+
+## 🚀 Overview
+
+The platform allows developers to upload and explore code with proper structure, review files with line-level context, collaborate in real-time, and even run meetings with optional transcription. Everything is built with full-stack type-safety and a clean architecture designed for scaling.
+
+## 🧱 Tech Stack
+
+- **Next.js (App Router)** – UI + routing  
+- **TypeScript** – full-stack type-safety  
+- **Tailwind CSS** – fast, minimal UI styling  
+- **tRPC** – type-safe API layer  
+- **Prisma** – database ORM  
+- **Supabase** – file storage + real-time channels  
+- **AssemblyAI** – meeting transcription (optional)  
+- **ESLint + Prettier** – code quality and formatting  
+- **WebRTC / WebSockets** – real-time meetings + presence  
+
+## ✨ Core Features
+
+### 📄 Contextual Code Review
+- View files with surrounding context  
+- Clean UI for code navigation  
+- Line-level comments and threaded discussions  
+
+### 👥 Real-Time Collaboration
+- Live presence indicators  
+- State sync across multiple reviewers  
+- Smooth multi-user interactions  
+
+### 🎥 Meetings + Transcription
+- Start/join project-linked meetings  
+- Share code context during calls  
+- Optional audio recording & transcription using AssemblyAI  
+- Transcripts stored & searchable inside the project  
+
+### 📤 File Uploads
+- Upload and manage project files via Supabase Storage  
+
+### 💳 Mock Payment Flow
+- Included demo subscription flow (for feature gating)  
+
+## 📂 Project Structure
+/
+├─ src/
+│ ├─ app/ # Next.js routes & pages
+│ ├─ components/ # Reusable UI components
+│ ├─ lib/ # Helpers (uploads, payments, utils)
+│ ├─ server/
+│ │ ├─ api/ # tRPC routers
+│ │ └─ db/ # Prisma client
+│ └─ styles/ # Tailwind styles
+├─ prisma/ # Prisma schema & migrations
+├─ public/ # Assets
+└─ start-database.sh
