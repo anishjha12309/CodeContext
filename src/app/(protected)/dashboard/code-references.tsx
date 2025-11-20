@@ -20,18 +20,18 @@ const CodeReferences = ({ filesReferences }: Props) => {
   if (filesReferences.length === 0) return null;
 
   return (
-    <div className="max-w-[70vw]">
+    <div className="w-full max-w-full md:max-w-[80vw]">
       <Tabs value={tab} onValueChange={setTab}>
-        <div className="flex gap-2 overflow-scroll rounded-md bg-gray-200 p-1">
+        <div className="flex gap-2 overflow-x-auto rounded-md bg-gray-200 p-1">
           {filesReferences.map((file) => (
             <button
               onClick={() => setTab(file.fileName)}
               key={file.fileName}
               className={cn(
-                "text-muted-foreground hover:bg-muted rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-                {
-                  "bg-primary text-primary-foreground": tab === file.fileName,
-                },
+                "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+                tab === file.fileName
+                  ? "bg-primary text-primary-foreground"
+                  : "text-gray-700 hover:bg-gray-300 hover:text-gray-900",
               )}
             >
               {file.fileName}
@@ -42,9 +42,13 @@ const CodeReferences = ({ filesReferences }: Props) => {
           <TabsContent
             key={file.fileName}
             value={file.fileName}
-            className="max-h-[40vh] max-w-7xl overflow-scroll rounded-md"
+            className="max-h-[40vh] w-full overflow-auto rounded-md"
           >
-            <SyntaxHighlighter language="typescript" style={vscDarkPlus}>
+            <SyntaxHighlighter
+              language="typescript"
+              style={vscDarkPlus}
+              customStyle={{ margin: 0, maxWidth: "100%" }}
+            >
               {file.sourceCode}
             </SyntaxHighlighter>
           </TabsContent>

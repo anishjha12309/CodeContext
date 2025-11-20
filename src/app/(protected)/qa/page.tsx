@@ -57,13 +57,17 @@ const QAPage = () => {
         })}
       </div>
       {question && (
-        <SheetContent className="overflow-y-scroll sm:max-w-[80vw]">
-          <SheetHeader>
+        <SheetContent className="w-full max-w-full overflow-y-scroll sm:w-auto sm:max-w-[80vw]">
+          <SheetHeader className="space-y-4 text-xl sm:text-xl lg:text-3xl">
             <SheetTitle>{question.question}</SheetTitle>
-            <MDEditor.Markdown source={question.answer} />
-            <CodeReferences
-              filesReferences={(question.filesReferences ?? []) as any}
-            />
+            <div className="overflow-x-auto">
+              <MDEditor.Markdown source={question.answer} className="p-2.5" />
+            </div>
+            <div className="overflow-x-auto">
+              <CodeReferences
+                filesReferences={(question.filesReferences ?? []) as any}
+              />
+            </div>
           </SheetHeader>
         </SheetContent>
       )}
