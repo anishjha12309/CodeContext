@@ -12,6 +12,9 @@ export default tseslint.config(
   ...compat.extends("next/core-web-vitals"),
   {
     files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
   },
   {
     linterOptions: {

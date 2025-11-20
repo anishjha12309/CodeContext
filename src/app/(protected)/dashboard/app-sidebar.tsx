@@ -36,6 +36,11 @@ const items = [
     url: "/qa",
     icon: Bot,
   },
+  {
+    title: "Meetings",
+    url: "/meetings",
+    icon: Presentation,
+  },
 
   {
     title: "Billing",
@@ -68,7 +73,7 @@ export function AppSideBar() {
                         href={item.url}
                         className={cn(
                           {
-                            "!bg-primary !text-white": pathName === item.url,
+                            "bg-primary! text-white!": pathName === item.url,
                           },
                           "list-none",
                         )}

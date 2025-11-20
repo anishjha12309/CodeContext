@@ -21,7 +21,6 @@ const SidebarLayout = ({ children }: Props) => {
       <AppSideBar />
       <main className="m-2 w-full">
         <div className="border-sidebar-border bg-sidebar flex items-center gap-2 rounded-md border p-2 px-4 shadow">
-          {/* Mobile Hamburger Menu - Only visible on mobile */}
           <Sheet>
             <SheetTrigger asChild className="md:hidden">
               <button className="flex items-center justify-center rounded-md p-2 hover:bg-gray-100">
