@@ -15,8 +15,7 @@ import {
   X,
   CheckCircle2,
 } from "lucide-react";
-
-// --- UI Components (Shadcn UI Style) ---
+import Link from "next/link";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?:
@@ -108,8 +107,6 @@ const Card: React.FC<CardProps> = ({ className = "", children, ...props }) => (
   </div>
 );
 
-// --- Aceternity Style Backgrounds ---
-
 const DotBackground = () => (
   <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] [bg-size:16px_16px]"></div>
 );
@@ -117,8 +114,6 @@ const DotBackground = () => (
 const Spotlight = () => (
   <div className="pointer-events-none absolute -top-40 right-0 left-0 mx-auto h-[500px] w-full max-w-3xl bg-linear-to-b from-neutral-100 to-transparent opacity-40 blur-3xl"></div>
 );
-
-// --- Main Component ---
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
@@ -137,13 +132,11 @@ export default function Home() {
       <DotBackground />
       <Spotlight />
 
-      {/* Navigation */}
       <header
         className={`fixed top-0 z-50 w-full transition-all duration-200 ${scrolled ? "border-b border-neutral-200 bg-white/80 backdrop-blur-md" : "bg-transparent"}`}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            {/* Logo Area */}
             <div
               className="flex cursor-pointer items-center gap-2"
               onClick={scrollToTop}
@@ -161,25 +154,25 @@ export default function Home() {
                   Features
                 </a>
                 <a
-                  href="#"
+                  href="#how-it-works"
                   className="text-sm font-medium text-neutral-600 transition-colors hover:text-black"
                 >
                   How it Works
                 </a>
                 <a
-                  href="#"
+                  href="/billing"
                   className="text-sm font-medium text-neutral-600 transition-colors hover:text-black"
                 >
                   Pricing
                 </a>
               </nav>
               <div className="flex items-center gap-4 border-l border-neutral-200 pl-6">
-                <a
-                  href="#"
+                <Link
+                  href="/sign-in"
                   className="text-sm font-medium text-neutral-900 hover:text-neutral-700"
                 >
                   Sign in
-                </a>
+                </Link>
                 <Button
                   size="sm"
                   onClick={() => (window.location.href = "/dashboard")}
@@ -209,7 +202,10 @@ export default function Home() {
               <a href="#" className="text-sm font-medium text-neutral-600">
                 Features
               </a>
-              <a href="#" className="text-sm font-medium text-neutral-600">
+              <a
+                href="#how-it-works"
+                className="text-sm font-medium text-neutral-600"
+              >
                 How it Works
               </a>
               <Button
@@ -469,7 +465,10 @@ export default function Home() {
         </section>
 
         {/* Steps Section */}
-        <section className="border-y border-neutral-100 bg-neutral-50/50 py-24">
+        <section
+          className="border-y border-neutral-100 bg-neutral-50/50 py-24"
+          id="how-it-works"
+        >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-16 text-center">
               <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
