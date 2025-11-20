@@ -6,7 +6,7 @@ type Props = {
   params: Promise<{ projectId: string }>;
 };
 
-const JoinHandelr = async (props: Props) => {
+const JoinHandler = async (props: Props) => {
   const { projectId } = await props.params;
   const { userId } = await auth();
   if (!userId) return redirect("/sign-in");
@@ -49,4 +49,4 @@ const JoinHandelr = async (props: Props) => {
   return redirect(`/dashboard`);
 };
 
-export default JoinHandelr;
+export default JoinHandler;

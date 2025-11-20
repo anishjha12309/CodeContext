@@ -2,11 +2,11 @@ import React from "react";
 import IssuesList from "./issues-list";
 
 type Props = {
-  params: { meetingId: string };
+  params: Promise<{ meetingId: string }>;
 };
 
-const MeetingDetailsPage = ({ params }: Props) => {
-  const { meetingId } = params;
+const MeetingDetailsPage = async ({ params }: Props) => {
+  const { meetingId } = await params;
   return (
     <div className="p-4">
       <IssuesList meetingId={meetingId} />
