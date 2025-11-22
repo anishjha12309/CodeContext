@@ -47,16 +47,19 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      // First verify the user has access to this project
-      const hasAccess = await ctx.db.userToProject.findFirst({
+      const project = await ctx.db.project.findFirst({
         where: {
-          projectId: input.projectId,
-          userId: ctx.user.userId!,
+          id: input.projectId,
+          deletedAt: null,
+          userToProjects: {
+            some: {
+              userId: ctx.user.userId!,
+            },
+          },
         },
       });
 
-      // If no access, return empty array instead of throwing error
-      if (!hasAccess) {
+      if (!project) {
         return [];
       }
 
