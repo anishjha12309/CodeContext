@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { api, type RouterOutputs } from "@/trpc/react";
-import { VideoIcon } from "lucide-react";
+import { Loader2, VideoIcon } from "lucide-react";
 import React from "react";
 
 type Props = {
@@ -31,7 +31,13 @@ const IssuesList = ({ meetingId }: Props) => {
     },
   );
 
-  if (isLoading || !meeting) return <div>Loading...</div>;
+  if (isLoading || !meeting)
+    return (
+      <>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <p className="mt-4 text-sm text-gray-500">Loading..</p>
+      </>
+    );
 
   return (
     <>

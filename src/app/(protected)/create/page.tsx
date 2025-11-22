@@ -2,7 +2,9 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import useRefetch from "@/hooks/use-refetch";
+import useProject from "@/hooks/use-project";
 import { api } from "@/trpc/react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -15,7 +17,10 @@ type FormInput = {
 const CreatePage = () => {
   const { register, handleSubmit, reset } = useForm<FormInput>();
   const refetch = useRefetch();
+  const router = useRouter();
+  const { setProjectId } = useProject();
   const createProject = api.project.createProject.useMutation();
+
   function onSubmit(data: FormInput) {
     createProject.mutate(
       {
@@ -24,10 +29,13 @@ const CreatePage = () => {
         githubToken: data.githubToken,
       },
       {
-        onSuccess: () => {
+        onSuccess: (project) => {
           toast.success("Project created successfully!");
+          // Set the newly created project as active
+          setProjectId(project.id);
           refetch();
           reset();
+          router.push("/dashboard");
         },
         onError: () => {
           toast.error("Failed to create project.");
@@ -71,7 +79,7 @@ const CreatePage = () => {
             />
             <div className="h-4"></div>
             <Button type="submit" disabled={createProject.isPending}>
-              Create Project
+              {createProject.isPending ? "Creating..." : "Create Project"}
             </Button>
           </form>
         </div>

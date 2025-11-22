@@ -4,6 +4,16 @@ import { Document } from "@langchain/core/documents";
 import { generateEmbedding } from "./gemini";
 import { db } from "@/server/db";
 
+// Sanitize strings to remove null bytes and control characters that PostgreSQL cannot handle
+function sanitizeForPostgres(str: string | null | undefined): string {
+  if (!str) return "";
+
+  // Remove null bytes and control characters (except newline, tab, carriage return)
+  return str
+    .replace(/\0/g, "") // Remove null bytes (0x00)
+    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ""); // Remove other control chars
+}
+
 function parseGithubUrl(githubUrl: string): { owner: string; repo: string } {
   const cleanUrl = githubUrl
     .trim()
@@ -397,22 +407,64 @@ export const indexGithubRepo = async (
       `\n💾 Saving ${allEmbeddings.length} embeddings to database...`,
     );
 
+    // Sanitize all data before database insertion
+    const sanitizedEmbeddings = allEmbeddings.map((embedding) => ({
+      summary: sanitizeForPostgres(embedding.summary),
+      sourceCode: sanitizeForPostgres(embedding.sourceCode),
+      fileName: sanitizeForPostgres(embedding.fileName),
+      projectId,
+    }));
+
     console.log("Creating database records...");
-    await db.sourceCodeEmbedding.createMany({
-      data: allEmbeddings.map((embedding) => ({
-        summary: embedding.summary,
-        sourceCode: embedding.sourceCode,
-        fileName: embedding.fileName,
-        projectId,
-      })),
-      skipDuplicates: true,
-    });
+
+    // Insert with error handling - try bulk first, fall back to individual inserts if needed
+    try {
+      await db.sourceCodeEmbedding.createMany({
+        data: sanitizedEmbeddings,
+        skipDuplicates: true,
+      });
+      console.log(
+        `✓ Bulk insert successful: ${sanitizedEmbeddings.length} records`,
+      );
+    } catch (bulkError: any) {
+      // If bulk insert fails, try individual inserts to identify problematic records
+      console.warn("⚠️  Bulk insert failed, attempting individual inserts...");
+      console.error("Bulk error:", bulkError?.message || bulkError);
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const embedding of sanitizedEmbeddings) {
+        try {
+          await db.sourceCodeEmbedding.create({
+            data: embedding,
+          });
+          successCount++;
+        } catch (individualError: any) {
+          failCount++;
+          console.error(
+            `✗ Failed to insert ${embedding.fileName}:`,
+            individualError?.message || individualError,
+          );
+        }
+      }
+
+      console.log(
+        `Individual inserts complete: ${successCount} succeeded, ${failCount} failed`,
+      );
+
+      if (successCount === 0) {
+        throw new Error(
+          "All individual inserts failed. Database operation aborted.",
+        );
+      }
+    }
 
     console.log("Fetching created records...");
     const records = await db.sourceCodeEmbedding.findMany({
       where: {
         projectId,
-        fileName: { in: allEmbeddings.map((e) => e.fileName) },
+        fileName: { in: sanitizedEmbeddings.map((e) => e.fileName) },
       },
       select: {
         id: true,
@@ -426,8 +478,9 @@ export const indexGithubRepo = async (
 
     for (const record of records) {
       const embedding = allEmbeddings.find(
-        (e) => e.fileName === record.fileName,
+        (e) => sanitizeForPostgres(e.fileName) === record.fileName,
       );
+
       if (!embedding) {
         console.warn(`⚠️  No embedding found for ${record.fileName}`);
         failed++;
@@ -445,11 +498,11 @@ export const indexGithubRepo = async (
         if (indexed % 10 === 0) {
           console.log(`  Updated ${indexed}/${records.length} embeddings...`);
         }
-      } catch (error) {
+      } catch (error: any) {
         failed++;
         console.error(
           `✗ Failed to update embedding for ${record.fileName}:`,
-          error,
+          error?.message || error,
         );
       }
     }

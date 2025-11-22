@@ -3,18 +3,49 @@
 import useProject from "@/hooks/use-project";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 
 const CommitLog = () => {
   const { projectId, project } = useProject();
-  const { data: commits } = api.project.getCommits.useQuery({ projectId });
+  const { data: commits, isLoading } = api.project.getCommits.useQuery(
+    { projectId },
+    {
+      refetchInterval: 5000, // Poll every 5 seconds for new commits
+      refetchIntervalInBackground: false, // Stop polling when tab is not active
+    },
+  );
+
+  // Show loading spinner while commits are being fetched
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <p className="mt-4 text-sm text-gray-500">Loading commit history...</p>
+      </div>
+    );
+  }
+
+  // Show message if no commits yet
+  if (!commits || commits.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <p className="mt-4 text-sm text-gray-500">
+          No commits found yet. Commits are being processed in the background...
+        </p>
+        <p className="mt-2 text-xs text-gray-400">
+          This may take a few minutes depending on your repository size.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
       <ul className="space-y-6">
-        {commits?.map((commit, commitIdx) => {
+        {commits.map((commit, commitIdx) => {
           return (
             <li key={commit.id} className="relative flex gap-x-4">
               <div

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import useRefetch from "@/hooks/use-refetch";
+import { Loader2 } from "lucide-react";
 
 const MeetingsPage = () => {
   const { projectId } = useProject();
@@ -27,7 +28,12 @@ const MeetingsPage = () => {
       <h1 className="text-xl font-semibold">Meetings</h1>
 
       {meetings && meetings.length === 0 && <div>No meetings found</div>}
-      {isLoading && <div>Loading...</div>}
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <p className="mt-4 text-sm text-gray-500">Loading meetings...</p>
+        </div>
+      )}
 
       <ul className="divide-y divide-gray-200">
         {meetings?.map((meeting) => (

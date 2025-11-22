@@ -72,7 +72,7 @@ export async function askQuestion(question: string, projectId: string) {
     (async () => {
       try {
         const { textStream } = await streamText({
-          model: google("gemini-2.5-flash-lite"),
+          model: google("gemini-2.0-flash-lite"),
           prompt: `
 You are an AI code assistant specializing in codebase analysis. You help developers understand their code by answering questions based on the provided codebase context.
 
