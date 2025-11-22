@@ -47,7 +47,21 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      // First verify the user has access to this project
+      const hasAccess = await ctx.db.userToProject.findFirst({
+        where: {
+          projectId: input.projectId,
+          userId: ctx.user.userId!,
+        },
+      });
+
+      // If no access, return empty array instead of throwing error
+      if (!hasAccess) {
+        return [];
+      }
+
       pollCommits(input.projectId).then().catch(console.error);
+
       return await ctx.db.commit.findMany({
         where: { projectId: input.projectId },
       });

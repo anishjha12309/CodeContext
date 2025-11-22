@@ -407,7 +407,6 @@ export const indexGithubRepo = async (
       `\n💾 Saving ${allEmbeddings.length} embeddings to database...`,
     );
 
-    // Sanitize all data before database insertion
     const sanitizedEmbeddings = allEmbeddings.map((embedding) => ({
       summary: sanitizeForPostgres(embedding.summary),
       sourceCode: sanitizeForPostgres(embedding.sourceCode),
@@ -417,7 +416,6 @@ export const indexGithubRepo = async (
 
     console.log("Creating database records...");
 
-    // Insert with error handling - try bulk first, fall back to individual inserts if needed
     try {
       await db.sourceCodeEmbedding.createMany({
         data: sanitizedEmbeddings,
@@ -427,7 +425,6 @@ export const indexGithubRepo = async (
         `✓ Bulk insert successful: ${sanitizedEmbeddings.length} records`,
       );
     } catch (bulkError: any) {
-      // If bulk insert fails, try individual inserts to identify problematic records
       console.warn("⚠️  Bulk insert failed, attempting individual inserts...");
       console.error("Bulk error:", bulkError?.message || bulkError);
 

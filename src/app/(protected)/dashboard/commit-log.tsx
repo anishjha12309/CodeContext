@@ -12,12 +12,12 @@ const CommitLog = () => {
   const { data: commits, isLoading } = api.project.getCommits.useQuery(
     { projectId },
     {
-      refetchInterval: 5000, // Poll every 5 seconds for new commits
-      refetchIntervalInBackground: false, // Stop polling when tab is not active
+      refetchInterval: 5000,
+      refetchIntervalInBackground: false,
     },
   );
 
-  // Show loading spinner while commits are being fetched
+  // Show loading spinner only while initially fetching
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -27,19 +27,9 @@ const CommitLog = () => {
     );
   }
 
-  // Show message if no commits yet
+  // If data has loaded but there are no commits, just show nothing or a simple empty state
   if (!commits || commits.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <p className="mt-4 text-sm text-gray-500">
-          No commits found yet. Commits are being processed in the background...
-        </p>
-        <p className="mt-2 text-xs text-gray-400">
-          This may take a few minutes depending on your repository size.
-        </p>
-      </div>
-    );
+    return null; // Or you could show a simple message like "No commits yet"
   }
 
   return (
@@ -84,7 +74,6 @@ const CommitLog = () => {
                   <div className="prose prose-sm mt-2 max-w-none text-gray-600">
                     <ReactMarkdown
                       components={{
-                        // Style the bullet points
                         ul: ({ children }) => (
                           <ul className="my-2 list-disc space-y-1 pl-5">
                             {children}
@@ -93,7 +82,7 @@ const CommitLog = () => {
                         li: ({ children }) => (
                           <li className="text-sm leading-6">{children}</li>
                         ),
-                        // Style code blocks (inline)
+
                         code: ({ children, className }) => {
                           const isInline = !className;
                           return isInline ? (
@@ -104,11 +93,11 @@ const CommitLog = () => {
                             <code className={className}>{children}</code>
                           );
                         },
-                        // Style paragraphs
+
                         p: ({ children }) => (
                           <p className="my-1 text-sm leading-6">{children}</p>
                         ),
-                        // Style strong/bold text
+
                         strong: ({ children }) => (
                           <strong className="font-semibold text-gray-900">
                             {children}
