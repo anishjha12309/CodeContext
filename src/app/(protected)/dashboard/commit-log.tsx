@@ -53,7 +53,7 @@ const CommitLog = () => {
                   alt="commit avatar"
                   className="relative mt-4 size-8 flex-none rounded-full bg-gray-50"
                 />
-                <div className="flex-auto rounded-md bg-white p-3 ring-1 ring-gray-200 ring-inset">
+                <div className="min-w-0 flex-auto rounded-md bg-white p-3 ring-1 ring-gray-200 ring-inset">
                   <div className="flex justify-between gap-x-4">
                     <Link
                       target="_blank"
@@ -69,9 +69,11 @@ const CommitLog = () => {
                       </span>
                     </Link>
                   </div>
-                  <span className="font-semibold">{commit.commitMessage}</span>
+                  <span className="wrap-break-words font-semibold">
+                    {commit.commitMessage}
+                  </span>
 
-                  <div className="prose prose-sm mt-2 max-w-none text-gray-600">
+                  <div className="prose prose-sm mt-2 max-w-none overflow-x-auto text-gray-600">
                     <ReactMarkdown
                       components={{
                         ul: ({ children }) => (
@@ -86,7 +88,7 @@ const CommitLog = () => {
                         code: ({ children, className }) => {
                           const isInline = !className;
                           return isInline ? (
-                            <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-800">
+                            <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs break-all whitespace-pre-wrap text-gray-800">
                               {children}
                             </code>
                           ) : (

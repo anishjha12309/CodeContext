@@ -30,20 +30,20 @@ const QAPage = () => {
           return (
             <React.Fragment key={question.id}>
               <SheetTrigger onClick={() => setQuestionIndex(index)}>
-                <div className="flex items-center gap-4 rounded-lg border bg-white p-4 shadow">
+                <div className="flex items-center gap-2 rounded-lg border bg-white p-3 shadow sm:gap-4 sm:p-4">
                   <img
-                    className="rounded-full"
+                    className="shrink-0 rounded-full"
                     height={30}
                     width={30}
                     src={question.user.imageUrl ?? ""}
                     alt="imageUrl"
                   />
-                  <div className="flex flex-col text-left">
+                  <div className="flex min-w-0 flex-1 flex-col text-left">
                     <div className="flex items-center gap-2">
-                      <p className="line-clamp-1 text-lg font-medium text-gray-700">
+                      <p className="line-clamp-1 min-w-0 flex-1 text-base font-medium text-gray-700 sm:text-lg">
                         {question.question}
                       </p>
-                      <span className="text-xs whitespace-nowrap text-gray-400">
+                      <span className="shrink-0 text-xs whitespace-nowrap text-gray-400">
                         {question.createdAt.toLocaleDateString()}
                       </span>
                     </div>
