@@ -17,7 +17,6 @@ const CommitLog = () => {
     },
   );
 
-  // Show loading spinner only while initially fetching
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -29,7 +28,7 @@ const CommitLog = () => {
 
   // If data has loaded but there are no commits, just show nothing or a simple empty state
   if (!commits || commits.length === 0) {
-    return null; // Or you could show a simple message like "No commits yet"
+    return null;
   }
 
   return (
