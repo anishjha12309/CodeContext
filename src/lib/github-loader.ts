@@ -1,5 +1,5 @@
 import { GithubRepoLoader } from "@langchain/community/document_loaders/web/github";
-import { summariseCode } from "./gemini";
+import { summariseCode, batchSummariseCode } from "./gemini";
 import { Document } from "@langchain/core/documents";
 import { generateEmbedding } from "./gemini";
 import { db } from "@/server/db";
@@ -242,25 +242,54 @@ const withRetry = async <T>(
   return null;
 };
 
+// Maximum files to process (to stay within API daily limits)
+const MAX_FILES_TO_PROCESS = 50;
+
 const shouldProcessFile = (doc: Document): boolean => {
   const source = doc.metadata.source?.toLowerCase() || "";
+  const content = doc.pageContent || "";
 
+  // Skip patterns - all the files we should NOT process
   const skipPatterns = [
+    // Environment and secrets
     /\.env$/,
     /\.env\./,
+    /\.env\.local/,
+    /\.env\.example/,
 
+    // Lock files
+    /package-lock\.json/,
+    /yarn\.lock/,
+    /pnpm-lock\.yaml/,
+    /bun\.lock/,
+    /bun\.lockb/,
+    /composer\.lock/,
+    /Gemfile\.lock/,
+    /poetry\.lock/,
+    /Cargo\.lock/,
+
+    // Dependencies and build
     /node_modules\//,
+    /vendor\//,
+    /\.next\//,
+    /dist\//,
+    /build\//,
+    /out\//,
+    /\.output\//,
+    /coverage\//,
+    /\.turbo\//,
+    /\.nuxt\//,
+    /\.cache\//,
+
+    // Generated/minified
     /\.min\./,
     /\.bundle\./,
-    /package-lock/,
-    /yarn\.lock/,
-    /pnpm-lock/,
-    /bun\.lock/,
-
     /\.generated\./,
     /prisma\/client/,
     /@prisma\/client/,
+    /generated\//,
 
+    // Binary files
     /\.wasm$/,
     /\.dll$/,
     /\.node$/,
@@ -268,10 +297,166 @@ const shouldProcessFile = (doc: Document): boolean => {
     /\.so$/,
     /\.exe$/,
     /\.bin$/,
+    /\.pyc$/,
+    /\.pyo$/,
+    /\.class$/,
+    /\.o$/,
+    /\.a$/,
+
+    // Images
+    /\.png$/,
+    /\.jpg$/,
+    /\.jpeg$/,
+    /\.gif$/,
+    /\.svg$/,
+    /\.ico$/,
+    /\.webp$/,
+    /\.avif$/,
+    /\.bmp$/,
+    /\.tiff?$/,
+
+    // Fonts
+    /\.woff2?$/,
+    /\.ttf$/,
+    /\.eot$/,
+    /\.otf$/,
+
+    // Media
+    /\.mp[34]$/,
+    /\.wav$/,
+    /\.ogg$/,
+    /\.mov$/,
+    /\.avi$/,
+    /\.webm$/,
+
+    // Archives
+    /\.zip$/,
+    /\.tar$/,
+    /\.gz$/,
+    /\.rar$/,
+    /\.7z$/,
+
+    // Documents
+    /\.pdf$/,
+    /\.doc[x]?$/,
+    /\.xls[x]?$/,
+    /\.ppt[x]?$/,
+
+    // ===== NON-CODE FILES TO SKIP =====
+
+    // CSS/Styling (not useful for code understanding)
+    /\.css$/,
+    /\.scss$/,
+    /\.sass$/,
+    /\.less$/,
+    /\.styl$/,
+    /tailwind\.config/,
+    /postcss\.config/,
+    /styles?\//,  // entire styles folders
+
+    // README and docs
+    /readme\.md$/,
+    /readme\.txt$/,
+    /changelog\.md$/,
+    /history\.md$/,
+    /contributing\.md$/,
+    /code_of_conduct\.md$/,
+    /license\.md$/,
+    /license\.txt$/,
+    /license$/,
+    /authors$/,
+    /contributors$/,
+    /docs?\//,  // docs folders
+
+    // Config files (low value for understanding code logic)
+    /\.gitignore$/,
+    /\.gitattributes$/,
+    /\.editorconfig$/,
+    /\.prettierrc/,
+    /\.prettierignore/,
+    /\.eslintrc/,
+    /\.eslintignore/,
+    /eslint\.config/,
+    /prettier\.config/,
+    /biome\.json$/,
+    /\.stylelintrc/,
+    /\.browserslistrc$/,
+    /\.nvmrc$/,
+    /\.node-version$/,
+    /\.ruby-version$/,
+    /\.python-version$/,
+    /\.tool-versions$/,
+    /tsconfig\.json$/,
+    /jsconfig\.json$/,
+    /next\.config/,
+    /vite\.config/,
+    /webpack\.config/,
+    /rollup\.config/,
+    /babel\.config/,
+    /\.babelrc/,
+    /jest\.config/,
+    /vitest\.config/,
+    /playwright\.config/,
+    /cypress\.config/,
+    /karma\.conf/,
+    /\.huskyrc/,
+    /\.lintstagedrc/,
+    /commitlint\.config/,
+    /renovate\.json$/,
+    /dependabot\.yml$/,
+    /\.github\//,  // GitHub workflows etc
+    /\.circleci\//,
+    /\.gitlab-ci/,
+    /Dockerfile$/,
+    /docker-compose/,
+    /\.dockerignore$/,
+    /Makefile$/,
+    /Procfile$/,
+    /netlify\.toml$/,
+    /vercel\.json$/,
+
+    // Test files (usually not needed for understanding main logic)
+    /\.test\./,
+    /\.spec\./,
+    /_test\./,
+    /_spec\./,
+    /\.stories\./,
+    /\.story\./,
+    /__tests__\//,
+    /__mocks__\//,
+    /__fixtures__\//,
+    /test\//,
+    /tests\//,
+    /spec\//,
+    /specs\//,
+    /e2e\//,
+    /cypress\//,
+    /playwright\//,
+
+    // Type definitions (auto-generated, low value)
+    /\.d\.ts$/,
+    /@types\//,
+    /types\.ts$/,  // pure type files
+
+    // Declaration files
+    /\.map$/,  // source maps
+    /\.snap$/,  // jest snapshots
   ];
 
   if (skipPatterns.some((pattern) => pattern.test(source))) {
-    console.log(`⏭️  Skipping: ${source}`);
+    console.log(`⏭️  Skipping (pattern): ${source}`);
+    return false;
+  }
+
+  // Skip files that are too large (likely generated or data files)
+  if (content.length > 50000) {
+    console.log(`⏭️  Skipping (too large: ${Math.round(content.length / 1000)}KB): ${source}`);
+    return false;
+  }
+
+  // Skip files that are too small (likely empty or trivial)
+  if (content.length < 50) {
+    console.log(`⏭️  Skipping (too small): ${source}`);
     return false;
   }
 
@@ -289,45 +474,115 @@ const generateEmbeddings = async (docs: Document[]) => {
     return [];
   }
 
-  const BATCH_SIZE = 5;
-  const DELAY_BETWEEN_BATCHES = 4000;
-  const embeddings = [];
+  // Check if repo is too large for free tier limits
+  if (filteredDocs.length > MAX_FILES_TO_PROCESS) {
+    const errorMessage = `Repository too large: ${filteredDocs.length} files to process exceeds the limit of ${MAX_FILES_TO_PROCESS} files. ` +
+      `This is due to Gemini API free tier daily limits (20 requests/day). ` +
+      `Consider using a smaller repository or upgrading to a paid API tier.`;
+    console.error(`❌ ${errorMessage}`);
+    throw new Error(errorMessage);
+  }
 
-  console.log(
-    `Processing ${filteredDocs.length} documents in batches of ${BATCH_SIZE}`,
-  );
-  console.log(
-    `⚠️  Note: Using 12s delay between batches to respect Gemini free tier (15 req/min)`,
-  );
+  console.log(`✅ Repository size OK: ${filteredDocs.length}/${MAX_FILES_TO_PROCESS} files (within limits)`);
 
-  for (let i = 0; i < filteredDocs.length; i += BATCH_SIZE) {
-    const batch = filteredDocs.slice(i, i + BATCH_SIZE);
-    const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(filteredDocs.length / BATCH_SIZE);
+  // ============================================
+  // PHASE 1: Generate all summaries (BATCHED - 10 files per API call)
+  // ============================================
+  const SUMMARY_BATCH_SIZE = 10; // 10 files per API call = 10x reduction in calls
+  const GENERATION_DELAY = 4100; // 4.1s between batches to stay under 15 RPM
+  
+  const totalBatches = Math.ceil(filteredDocs.length / SUMMARY_BATCH_SIZE);
+  const apiCalls = totalBatches;
+  
+  console.log(`\n📝 PHASE 1: Generating summaries for ${filteredDocs.length} files...`);
+  console.log(`⚡ BATCHED: ${SUMMARY_BATCH_SIZE} files per API call = ${apiCalls} total API calls`);
+  console.log(`⚠️  Rate limit: 15 RPM (one batch every 4 seconds)`);
+  
+  const estimatedSummaryTimeMin = Math.ceil((totalBatches * GENERATION_DELAY) / 60000);
+  console.log(`⏱️  Estimated time for summaries: ~${estimatedSummaryTimeMin} minutes (${Math.round(filteredDocs.length / totalBatches)}x faster than sequential!)`);
 
-    console.log(
-      `\n📦 Processing batch ${batchNumber}/${totalBatches} (files ${i + 1}-${Math.min(i + BATCH_SIZE, filteredDocs.length)})`,
+  const summaries: Array<{ doc: Document; summary: string; fileName: string }> = [];
+
+  for (let batchIdx = 0; batchIdx < filteredDocs.length; batchIdx += SUMMARY_BATCH_SIZE) {
+    const batch = filteredDocs.slice(batchIdx, batchIdx + SUMMARY_BATCH_SIZE);
+    const batchNum = Math.floor(batchIdx / SUMMARY_BATCH_SIZE) + 1;
+    
+    console.log(`\n  📦 Batch ${batchNum}/${totalBatches}: Processing ${batch.length} files`);
+    batch.forEach((doc, i) => {
+      console.log(`    ${i + 1}. ${doc.metadata.source || 'unknown'}`);
+    });
+    
+    // Prepare files for batch call
+    const filesToSummarize = batch.map(doc => ({
+      fileName: doc.metadata.source || 'unknown',
+      code: doc.pageContent,
+    }));
+    
+    // Make single API call for entire batch
+    const batchSummaries = await withRetry(
+      () => batchSummariseCode(filesToSummarize),
+      3,
+      `Batch ${batchNum} (${batch.length} files)`,
     );
-
-    const batchPromises = batch.map(async (doc, idx) => {
-      const globalIdx = i + idx;
-      const fileName = doc?.metadata.source || "unknown";
-
-      console.log(
-        `  [${globalIdx + 1}/${filteredDocs.length}] Starting: ${fileName}`,
-      );
-
-      const summary = await withRetry(
-        () => summariseCode(doc!),
-        3,
-        `Summary for ${fileName}`,
-      );
-
-      if (!summary || summary.trim().length === 0) {
-        console.warn(`  ⚠️  Empty/failed summary for ${fileName}, skipping`);
-        return null;
+    
+    if (batchSummaries && batchSummaries.length === batch.length) {
+      // Match summaries back to documents
+      for (let i = 0; i < batch.length; i++) {
+        const doc = batch[i]!;
+        const summary = batchSummaries[i];
+        const fileName = doc.metadata.source || 'unknown';
+        
+        if (summary && summary.trim().length > 0) {
+          summaries.push({ doc, summary, fileName });
+        } else {
+          console.warn(`    ⚠️  Empty summary for ${fileName}`);
+        }
       }
+      console.log(`  ✓ Batch ${batchNum} complete: ${batchSummaries.length} summaries`);
+    } else {
+      console.warn(`  ⚠️  Batch ${batchNum} failed, skipping ${batch.length} files`);
+    }
+    
+    // Delay before next batch (except for last one)
+    if (batchIdx + SUMMARY_BATCH_SIZE < filteredDocs.length) {
+      const remainingBatches = totalBatches - batchNum;
+      const remainingMin = Math.ceil((remainingBatches * GENERATION_DELAY) / 60000);
+      console.log(`  ⏳ Next batch in 4s... (${remainingBatches} batches, ~${remainingMin}min left)`);
+      await delay(GENERATION_DELAY);
+    }
+  }
 
+  console.log(`\n✅ PHASE 1 complete: ${summaries.length}/${filteredDocs.length} summaries generated`);
+
+  if (summaries.length === 0) {
+    console.log("⚠️  No summaries generated");
+    return [];
+  }
+
+  // ============================================
+  // PHASE 2: Generate all embeddings (1500 RPM limit)
+  // ============================================
+  console.log(`\n🔢 PHASE 2: Generating embeddings for ${summaries.length} files...`);
+  console.log(`⚡ Rate limit: 1500 RPM (batches of 25 per second)`);
+  
+  const EMBEDDING_BATCH_SIZE = 25;
+  const EMBEDDING_BATCH_DELAY = 1100; // 1.1s between batches of 25 = ~1360 RPM (under 1500)
+  const embeddings: Array<{
+    summary: string;
+    embedding: number[];
+    sourceCode: string;
+    fileName: string;
+  }> = [];
+
+  for (let i = 0; i < summaries.length; i += EMBEDDING_BATCH_SIZE) {
+    const batch = summaries.slice(i, i + EMBEDDING_BATCH_SIZE);
+    const batchNum = Math.floor(i / EMBEDDING_BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(summaries.length / EMBEDDING_BATCH_SIZE);
+    
+    console.log(`  📦 Embedding batch ${batchNum}/${totalBatches} (${batch.length} files)`);
+
+    // Process batch in parallel
+    const batchPromises = batch.map(async ({ doc, summary, fileName }) => {
       const embedding = await withRetry(
         () => generateEmbedding(summary),
         3,
@@ -335,42 +590,32 @@ const generateEmbeddings = async (docs: Document[]) => {
       );
 
       if (!embedding) {
-        console.warn(
-          `  ⚠️  Failed to generate embedding for ${fileName}, skipping`,
-        );
+        console.warn(`  ⚠️  Failed embedding for ${fileName}`);
         return null;
       }
-
-      console.log(`  ✓ Completed: ${fileName}`);
 
       return {
         summary,
         embedding,
-        sourceCode: JSON.parse(JSON.stringify(doc?.pageContent)),
+        sourceCode: JSON.parse(JSON.stringify(doc.pageContent)),
         fileName,
       };
     });
 
     const batchResults = await Promise.all(batchPromises);
-    const validResults = batchResults.filter((result) => result !== null);
+    const validResults = batchResults.filter((r): r is NonNullable<typeof r> => r !== null);
     embeddings.push(...validResults);
 
-    console.log(
-      `✓ Batch ${batchNumber} complete: ${validResults.length}/${batch.length} succeeded`,
-    );
+    console.log(`  ✓ Batch ${batchNum}: ${validResults.length}/${batch.length} succeeded`);
 
-    if (i + BATCH_SIZE < filteredDocs.length) {
-      const remainingBatches = totalBatches - batchNumber;
-      const estimatedTimeMin = Math.ceil(
-        (remainingBatches * DELAY_BETWEEN_BATCHES) / 60000,
-      );
-      console.log(
-        `⏳ Waiting 12s before next batch... (Est. ${estimatedTimeMin} min remaining)`,
-      );
-      await delay(DELAY_BETWEEN_BATCHES);
+    // Small delay between batches
+    if (i + EMBEDDING_BATCH_SIZE < summaries.length) {
+      await delay(EMBEDDING_BATCH_DELAY);
     }
   }
 
+  console.log(`\n✅ PHASE 2 complete: ${embeddings.length}/${summaries.length} embeddings generated`);
+  
   return embeddings;
 };
 

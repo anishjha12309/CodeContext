@@ -12,7 +12,7 @@ export default function Page() {
       <div className="animate-float pointer-events-none absolute top-20 left-20 hidden h-72 w-72 rounded-full bg-gray-400/20 blur-3xl sm:block dark:bg-gray-700/20" />
       <div className="animate-float-delayed pointer-events-none absolute right-20 bottom-20 hidden h-96 w-96 rounded-full bg-gray-500/20 blur-3xl sm:block dark:bg-gray-600/20" />
 
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#80808033_1px,transparent_1px),linear-gradient(to_bottom,#80808033_1px,transparent_1px)] bg-[size:14px_24px]" />
 
       <div className="relative z-10 w-full max-w-md">
         <div className="clerk-signup-wrapper">

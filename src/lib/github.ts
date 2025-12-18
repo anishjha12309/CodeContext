@@ -99,65 +99,78 @@ export const pollCommits = async (projectId: string) => {
     return { count: 0 };
   }
 
-  const commitsToCreate = [];
+  const commitsToCreate: Array<{
+    projectId: string;
+    commitHash: string;
+    commitMessage: string;
+    commitAuthorName: string;
+    commitAuthorAvatar: string;
+    commitDate: string;
+    summary: string;
+  }> = [];
 
-  const DELAY_BETWEEN_COMMITS = 6000;
+  // Process 2 commits in parallel (safe at 15 RPM = 7.5 RPM effective rate)
+  const PARALLEL_COMMITS = 2;
+  const DELAY_BETWEEN_BATCHES = 4100; // 4.1s to stay under 15 RPM
 
   console.log(
-    `⚠️  Processing commits with 6s delay to respect Gemini free tier (10 req/min)`,
+    `⚡ Processing commits in parallel (${PARALLEL_COMMITS} at a time, 4s between batches)`,
   );
   const estimatedTimeMin = Math.ceil(
-    (unprocessedCommits.length * DELAY_BETWEEN_COMMITS) / 60000,
+    (Math.ceil(unprocessedCommits.length / PARALLEL_COMMITS) * DELAY_BETWEEN_BATCHES) / 60000,
   );
   console.log(`⏱️  Estimated time: ~${estimatedTimeMin} minutes`);
 
-  for (let index = 0; index < unprocessedCommits.length; index++) {
-    const commit = unprocessedCommits[index]!;
-    console.log(
-      `\n[${index + 1}/${unprocessedCommits.length}] Processing commit: ${commit.commitHash}`,
-    );
+  for (let i = 0; i < unprocessedCommits.length; i += PARALLEL_COMMITS) {
+    const batch = unprocessedCommits.slice(i, i + PARALLEL_COMMITS);
+    const batchNum = Math.floor(i / PARALLEL_COMMITS) + 1;
+    const totalBatches = Math.ceil(unprocessedCommits.length / PARALLEL_COMMITS);
 
-    // Generate summary with retry logic
-    const summary = await withRetry(
-      () => summariseCommit(githubUrl, commit.commitHash),
-      3,
-      `Commit ${commit.commitHash}`,
-    );
+    console.log(`\n📦 Batch ${batchNum}/${totalBatches}: Processing ${batch.length} commits`);
 
-    if (summary) {
-      console.log(`✓ Summary generated for ${commit.commitHash}`);
-      commitsToCreate.push({
-        projectId: projectId,
-        commitHash: commit.commitHash,
-        commitMessage: commit.commitMessage,
-        commitAuthorName: commit.commitAuthorName,
-        commitAuthorAvatar: commit.commitAuthorAvatar,
-        commitDate: commit.commitDate,
-        summary: summary,
-      });
-    } else {
-      console.warn(`⚠️  Failed to generate summary for ${commit.commitHash}`);
-      commitsToCreate.push({
-        projectId: projectId,
-        commitHash: commit.commitHash,
-        commitMessage: commit.commitMessage,
-        commitAuthorName: commit.commitAuthorName,
-        commitAuthorAvatar: commit.commitAuthorAvatar,
-        commitDate: commit.commitDate,
-        summary: "Failed to generate summary after retries",
-      });
-    }
-
-    // Add delay between commits (except for last one)
-    if (index < unprocessedCommits.length - 1) {
-      const remainingCommits = unprocessedCommits.length - index - 1;
-      const remainingTimeMin = Math.ceil(
-        (remainingCommits * DELAY_BETWEEN_COMMITS) / 60000,
+    // Process batch in parallel
+    const batchPromises = batch.map(async (commit) => {
+      console.log(`  → ${commit.commitHash.slice(0, 7)}: Generating summary...`);
+      
+      const summary = await withRetry(
+        () => summariseCommit(githubUrl, commit.commitHash),
+        3,
+        `Commit ${commit.commitHash.slice(0, 7)}`,
       );
-      console.log(
-        `⏳ Waiting 6s before next commit... (${remainingCommits} remaining, ~${remainingTimeMin} min)`,
-      );
-      await delay(DELAY_BETWEEN_COMMITS);
+
+      if (summary) {
+        console.log(`  ✓ ${commit.commitHash.slice(0, 7)}: Summary complete`);
+        return {
+          projectId: projectId,
+          commitHash: commit.commitHash,
+          commitMessage: commit.commitMessage,
+          commitAuthorName: commit.commitAuthorName,
+          commitAuthorAvatar: commit.commitAuthorAvatar,
+          commitDate: commit.commitDate,
+          summary: summary,
+        };
+      } else {
+        console.warn(`  ⚠️  ${commit.commitHash.slice(0, 7)}: Failed, using fallback`);
+        return {
+          projectId: projectId,
+          commitHash: commit.commitHash,
+          commitMessage: commit.commitMessage,
+          commitAuthorName: commit.commitAuthorName,
+          commitAuthorAvatar: commit.commitAuthorAvatar,
+          commitDate: commit.commitDate,
+          summary: "Failed to generate summary after retries",
+        };
+      }
+    });
+
+    const results = await Promise.all(batchPromises);
+    commitsToCreate.push(...results);
+
+    // Delay before next batch (except for last one)
+    if (i + PARALLEL_COMMITS < unprocessedCommits.length) {
+      const remaining = Math.ceil((unprocessedCommits.length - i - PARALLEL_COMMITS) / PARALLEL_COMMITS);
+      console.log(`  ⏳ Next batch in 4s... (${remaining} batches remaining)`);
+      await delay(DELAY_BETWEEN_BATCHES);
     }
   }
 
