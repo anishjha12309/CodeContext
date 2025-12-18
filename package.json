@@ -115,5 +115,10 @@
   },
   "ct3aMetadata": {
     "initVersion": "7.40.0"
+  },
+  "overrides": {
+    "@langchain/community": {
+      "zod": "$zod"
+    }
   }
 }
