@@ -118,7 +118,8 @@
   },
   "overrides": {
     "@langchain/community": {
-      "zod": "$zod"
+      "zod": "$zod",
+      "ignore": "$ignore"
     }
   }
 }
