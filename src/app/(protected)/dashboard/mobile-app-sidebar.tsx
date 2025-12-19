@@ -3,8 +3,10 @@
 import { Button } from "@/components/ui/button";
 import useProject from "@/hooks/use-project";
 import { cn } from "@/lib/utils";
+import { api } from "@/trpc/react";
 import {
   Bot,
+  Coins,
   CreditCard,
   LayoutDashboard,
   Plus,
@@ -40,6 +42,7 @@ const items = [
 export function MobileSidebarContent() {
   const pathName = usePathname();
   const { projects, projectId, setProjectId } = useProject();
+  const { data: credits } = api.project.getMyCredits.useQuery();
 
   return (
     <div className="flex h-full flex-col bg-white">
@@ -125,6 +128,22 @@ export function MobileSidebarContent() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Credits Footer */}
+      <div className="border-t border-gray-200 p-4">
+        <Link
+          href="/billing"
+          className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 transition-all hover:bg-gray-100"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-zinc-200 text-zinc-600">
+            <Coins className="h-4 w-4" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold">{credits ?? 0}</p>
+            <p className="text-xs text-gray-500">Credits</p>
+          </div>
+        </Link>
       </div>
     </div>
   );

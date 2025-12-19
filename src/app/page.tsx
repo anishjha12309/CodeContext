@@ -6,7 +6,6 @@ import {
   MessageSquare,
   FileSearch,
   Zap,
-  Shield,
   Layers,
   Code2,
   Cpu,
@@ -479,11 +478,11 @@ export default function Home() {
                   <FileSearch className="h-5 w-5 text-neutral-900" />
                 </div>
                 <h3 className="mb-2 text-xl font-semibold">
-                  Intelligent Indexing
+                  GitHub Integration
                 </h3>
                 <p className="text-neutral-500">
-                  Connect your repository and let AI understand your entire
-                  codebase structure instantly.
+                  Connect any public or private GitHub repository. Your codebase is 
+                  instantly indexed and ready for exploration.
                 </p>
               </div>
             </Card>
@@ -493,14 +492,14 @@ export default function Home() {
               <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-purple-50 blur-2xl transition-colors group-hover:bg-purple-100"></div>
               <div className="relative z-10">
                 <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50">
-                  <Shield className="h-5 w-5 text-neutral-900" />
+                  <Zap className="h-5 w-5 text-neutral-900" />
                 </div>
                 <h3 className="mb-2 text-xl font-semibold">
-                  Enterprise Security
+                  Credit-Based Pricing
                 </h3>
                 <p className="text-neutral-500">
-                  SOC2 compliant. Your code is processed in ephemeral containers
-                  and never used for training.
+                  Pay only for what you use. No subscriptions, no hidden fees. 
+                  Purchase credits and use them whenever you need.
                 </p>
               </div>
             </Card>
@@ -529,13 +528,13 @@ export default function Home() {
               {[
                 {
                   title: "Connect",
-                  desc: "Link GitHub/GitLab repo",
+                  desc: "Link your GitHub repository",
                   icon: Code2,
                 },
-                { title: "Analyze", desc: "AI indexes logic flow", icon: Cpu },
+                { title: "Analyze", desc: "AI indexes your codebase", icon: Cpu },
                 {
                   title: "Ask",
-                  desc: "Get instant answers",
+                  desc: "Get contextual answers",
                   icon: MessageSquare,
                 },
               ].map((step, i) => (
@@ -565,11 +564,11 @@ export default function Home() {
 
             <div className="relative z-10 mx-auto max-w-3xl">
               <h2 className="mb-6 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
-                Ready to debug faster?
+                Ready to understand your codebase?
               </h2>
               <p className="mx-auto mb-10 max-w-xl text-lg text-neutral-300">
-                Join thousands of developers who use CodeContext to understand
-                legacy codebases in seconds, not hours.
+                Stop wasting hours searching through files. Connect your repository 
+                and start asking questions in natural language.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button
@@ -578,15 +577,15 @@ export default function Home() {
                   className="h-12 rounded-full bg-white px-8 text-neutral-900 hover:bg-neutral-200"
                   onClick={() => (window.location.href = "/dashboard")}
                 >
-                  Start Free Trial
+                  Get Started Now
                 </Button>
                 <div className="flex items-center gap-2 text-sm text-neutral-400 sm:ml-4">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>14-day free trial</span>
+                  <span>Pay-as-you-go credits</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-neutral-400">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>No CC required</span>
+                  <span>No subscriptions</span>
                 </div>
               </div>
             </div>
