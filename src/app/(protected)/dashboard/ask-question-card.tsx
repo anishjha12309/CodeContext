@@ -30,6 +30,7 @@ const AskQuestionCard = () => {
   >([]);
   const [answer, setAnswer] = useState("");
   const saveAnswer = api.project.saveAnswer.useMutation();
+  const utils = api.useUtils();
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     setAnswer("");
@@ -49,6 +50,9 @@ const AskQuestionCard = () => {
       }
     }
     setLoading(false);
+    
+    // Refetch credits after question is asked (credit was deducted)
+    await utils.project.getMyCredits.invalidate();
   };
   const refetch = useRefetch();
 

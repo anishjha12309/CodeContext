@@ -1,132 +1,138 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useState } from "react";
 import {
   CreditCard,
-  Calendar,
-  Lock,
   ArrowRight,
   Check,
   X,
-  ShieldCheck,
+  Coins,
   Sparkles,
+  TrendingUp,
+  Clock,
+  ShieldCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import Script from "next/script";
+import { api } from "@/trpc/react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-// Utility for cleaner tailwind classes
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
 }
 
-// --- Components ---
-
-const Backdrop = ({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    onClick={onClick}
-    className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/20 backdrop-blur-[2px]"
-  >
-    {children}
-  </motion.div>
-);
-
-const Modal = ({
-  handleClose,
-  children,
-}: {
-  handleClose: () => void;
-  children: React.ReactNode;
-}) => (
-  <Backdrop onClick={handleClose}>
-    <motion.div
-      onClick={(e) => e.stopPropagation()}
-      initial={{ scale: 0.95, opacity: 0, y: 20 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      exit={{ scale: 0.95, opacity: 0, y: 20 }}
-      transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className="relative w-full max-w-md overflow-hidden rounded-3xl border border-zinc-100 bg-white p-8 shadow-2xl"
-    >
-      {children}
-    </motion.div>
-  </Backdrop>
-);
+// Credit packages
+const CREDIT_PACKAGES = [
+  { amount: 50, credits: 50, popular: false },
+  { amount: 100, credits: 100, popular: true },
+  { amount: 500, credits: 500, popular: false },
+  { amount: 1000, credits: 1000, popular: false },
+];
 
 export default function BillingPage() {
-  const [amount, setAmount] = useState<number>(50);
+  const [selectedPackage, setSelectedPackage] = useState(1); // Default to 100
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [showDecline, setShowDecline] = useState<boolean>(false);
-  const [cardNumber, setCardNumber] = useState<string>("");
-  const [cardName, setCardName] = useState<string>("");
-  const [expiry, setExpiry] = useState<string>("");
-  const [cvv, setCvv] = useState<string>("");
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [creditsAdded, setCreditsAdded] = useState<number>(0);
 
-  // --- Logic ---
+  const { data: credits, refetch: refetchCredits } = api.project.getMyCredits.useQuery();
+  const utils = api.useUtils();
 
-  const formatCardNumber = (value: string): string => {
-    const cleaned = value.replace(/\s/g, "");
-    const chunks = cleaned.match(/.{1,4}/g);
-    return chunks ? chunks.join(" ") : cleaned;
-  };
+  const selectedPkg = CREDIT_PACKAGES[selectedPackage]!;
 
-  const handleCardNumberChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    const value = e.target.value.replace(/\s/g, "");
-    if (value.length <= 16 && /^\d*$/.test(value)) {
-      setCardNumber(formatCardNumber(value));
-    }
-  };
+  const handlePayment = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/razorpay/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: selectedPkg.amount }),
+      });
 
-  const handleExpiryChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (value.length >= 2) {
-      value = value.slice(0, 2) + "/" + value.slice(2, 4);
-    }
-    if (value.length <= 5) setExpiry(value);
-  };
-
-  const handleCvvChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    const value = e.target.value;
-    if (value.length <= 3 && /^\d*$/.test(value)) setCvv(value);
-  };
-
-  const handlePayment = (): void => {
-    setIsModalOpen(false);
-    // Simulate API call
-    setTimeout(() => {
-      const success = Math.random() > 0.3;
-      if (success) {
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 4000);
-      } else {
-        setShowDecline(true);
-        setTimeout(() => setShowDecline(false), 4000);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create order");
       }
-    }, 500);
-  };
 
-  const calculateProcessingFee = (baseAmount: number): string =>
-    (baseAmount * 0.029).toFixed(2);
-  const calculateTotal = (baseAmount: number): string =>
-    (baseAmount * 1.029).toFixed(2);
-  const presetAmounts: number[] = [25, 50, 100, 250];
+      const { orderId, amount: orderAmount, currency } = await response.json();
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderAmount,
+        currency: currency,
+        name: "CodeContext",
+        description: `Purchase ${selectedPkg.credits} Credits`,
+        order_id: orderId,
+        handler: async function (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) {
+          try {
+            const verifyResponse = await fetch("/api/razorpay/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            if (verifyResponse.ok) {
+              const result = await verifyResponse.json();
+              setCreditsAdded(result.credits);
+              setShowSuccess(true);
+              setTimeout(() => setShowSuccess(false), 5000);
+              // Refetch credits
+              await refetchCredits();
+              await utils.project.getMyCredits.invalidate();
+            } else {
+              throw new Error("Verification failed");
+            }
+          } catch {
+            setShowDecline(true);
+            setTimeout(() => setShowDecline(false), 5000);
+          }
+        },
+        theme: {
+          color: "#18181b",
+        },
+        modal: {
+          ondismiss: function () {
+            setIsLoading(false);
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.on("payment.failed", function () {
+        setShowDecline(true);
+        setTimeout(() => setShowDecline(false), 5000);
+      });
+      razorpay.open();
+    } catch (error) {
+      console.error("Payment error:", error);
+      setShowDecline(true);
+      setTimeout(() => setShowDecline(false), 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-zinc-50 p-4 text-zinc-950 selection:bg-zinc-900 selection:text-white">
-      {/* Ambient Background Grid */}
-      <div className="pointer-events-none absolute inset-0 h-full w-full bg-white bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white via-transparent to-zinc-50/80"></div>
+    <>
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="lazyOnload"
+      />
 
-      <div className="relative z-10 w-full max-w-xl">
+      <div className="min-h-screen p-4 md:p-8">
         {/* Notification Alerts */}
         <div className="pointer-events-none fixed top-6 right-0 left-0 z-50 flex justify-center">
           <AnimatePresence mode="wait">
@@ -135,17 +141,15 @@ export default function BillingPage() {
                 initial={{ opacity: 0, y: -20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                className="flex items-center gap-3 rounded-full border border-zinc-200 bg-white px-6 py-3 shadow-xl shadow-zinc-200/50"
+                className="pointer-events-auto flex items-center gap-3 rounded-xl border bg-card px-6 py-3 shadow-xl"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white">
                   <Check className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">
-                    Payment Successful
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    ID: #{Math.floor(Math.random() * 1000000)}
+                  <p className="text-sm font-semibold">Payment Successful!</p>
+                  <p className="text-xs text-muted-foreground">
+                    +{creditsAdded} credits added
                   </p>
                 </div>
               </motion.div>
@@ -156,17 +160,15 @@ export default function BillingPage() {
                 initial={{ opacity: 0, y: -20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                className="flex items-center gap-3 rounded-full border border-zinc-200 bg-white px-6 py-3 shadow-xl shadow-zinc-200/50"
+                className="pointer-events-auto flex items-center gap-3 rounded-xl border bg-card px-6 py-3 shadow-xl"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive text-white">
                   <X className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">
-                    Payment Declined
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    Please check card details.
+                  <p className="text-sm font-semibold">Payment Failed</p>
+                  <p className="text-xs text-muted-foreground">
+                    Please try again
                   </p>
                 </div>
               </motion.div>
@@ -174,258 +176,145 @@ export default function BillingPage() {
           </AnimatePresence>
         </div>
 
-        {/* Main Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="group relative overflow-hidden rounded-[2.5rem] border border-zinc-200 bg-white shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)]"
-        >
-          {/* Top Decorative Line */}
-          <div className="absolute top-0 h-1 w-full bg-gradient-to-r from-transparent via-zinc-950 to-transparent opacity-10"></div>
+        <div className="mx-auto max-w-4xl space-y-6">
+          {/* Header */}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
+            <p className="text-muted-foreground">
+              Manage your credits and subscription
+            </p>
+          </div>
 
-          <div className="p-8 sm:p-10">
-            {/* Header */}
-            <div className="mb-10 text-center">
-              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-zinc-100 bg-zinc-50 shadow-inner">
-                <CreditCard
-                  className="h-6 w-6 text-zinc-900"
-                  strokeWidth={1.5}
-                />
-              </div>
-              <h1 className="mb-2 text-3xl font-semibold tracking-tight text-zinc-950">
-                Payment Portal
-              </h1>
-              <p className="text-sm text-zinc-500">
-                Secure anonymous transaction
-              </p>
-            </div>
-
-            {/* Slider Section */}
-            <div className="mb-12 space-y-6">
-              <div className="flex items-baseline justify-center gap-1">
-                <span className="text-5xl font-bold tracking-tighter text-zinc-950">
-                  ${amount}
+          {/* Credit Balance Card */}
+          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <Coins className="h-4 w-4" />
+                Current Balance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-bold tracking-tight">
+                  {credits ?? 0}
                 </span>
-                <span className="text-lg font-medium text-zinc-400">USD</span>
+                <span className="text-xl text-muted-foreground">credits</span>
               </div>
-
-              <div className="relative w-full">
-                <input
-                  type="range"
-                  min="10"
-                  max="500"
-                  value={amount}
-                  onChange={(e) => setAmount(parseInt(e.target.value))}
-                  className="slider-thumb h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-100 focus:outline-none"
-                  style={{
-                    background: `linear-gradient(to right, #18181b 0%, #18181b ${((amount - 10) / 490) * 100}%, #f4f4f5 ${((amount - 10) / 490) * 100}%, #f4f4f5 100%)`,
-                  }}
-                />
-                <div className="mt-4 flex justify-between text-xs font-medium text-zinc-400">
-                  <span>$10</span>
-                  <span>$500</span>
+              <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span>50 credits per project</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <span>1 credit per question</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Presets */}
-              <div className="grid grid-cols-4 gap-3">
-                {presetAmounts.map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => setAmount(preset)}
+          {/* Credit Packages */}
+          <div>
+            <h2 className="mb-4 text-xl font-semibold">Buy Credits</h2>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {CREDIT_PACKAGES.map((pkg, index) => (
+                <motion.div
+                  key={pkg.amount}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Card
                     className={cn(
-                      "rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200",
-                      amount === preset
-                        ? "border-zinc-950 bg-zinc-950 text-white shadow-lg shadow-zinc-900/20"
-                        : "border-zinc-100 bg-white text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50",
+                      "relative cursor-pointer transition-all",
+                      selectedPackage === index
+                        ? "border-2 border-primary ring-2 ring-primary/20"
+                        : "hover:border-primary/50"
                     )}
+                    onClick={() => setSelectedPackage(index)}
                   >
-                    ${preset}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Summary Box */}
-            <div className="mb-8 space-y-3 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/50 p-6">
-              <div className="flex justify-between text-sm text-zinc-500">
-                <span>Subtotal</span>
-                <span>${amount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-zinc-500">
-                <span className="flex items-center gap-1">
-                  Processing Fee{" "}
-                  <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] text-zinc-600">
-                    2.9%
-                  </span>
-                </span>
-                <span>${calculateProcessingFee(amount)}</span>
-              </div>
-              <div className="my-2 h-px w-full bg-zinc-200"></div>
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-zinc-900">Total Due</span>
-                <span className="text-xl font-bold text-zinc-900">
-                  ${calculateTotal(amount)}
-                </span>
-              </div>
-            </div>
-
-            {/* Action Button */}
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-zinc-950 px-8 py-4 text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-all duration-300 hover:bg-zinc-800 hover:shadow-xl hover:shadow-zinc-900/10 active:scale-[0.98]"
-            >
-              <span className="font-medium">Proceed to Checkout</span>
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </button>
-
-            {/* Footer Security */}
-            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-zinc-400">
-              <ShieldCheck className="h-3 w-3" />
-              <span>Encrypted 256-bit Connection</span>
+                    {pkg.popular && (
+                      <div className="absolute -top-2 left-1/2 -translate-x-1/2">
+                        <span className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                          <Sparkles className="h-3 w-3" />
+                          Popular
+                        </span>
+                      </div>
+                    )}
+                    <CardContent className="p-4 pt-6 text-center">
+                      <div className="mb-2 text-3xl font-bold">
+                        {pkg.credits}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        credits
+                      </div>
+                      <div className="mt-3 text-lg font-semibold">
+                        ₹{pkg.amount}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
           </div>
-        </motion.div>
-      </div>
 
-      {/* Custom Payment Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <Modal handleClose={() => setIsModalOpen(false)}>
-            <div className="relative">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="absolute -top-4 -right-4 p-2 text-zinc-400 hover:text-zinc-900"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              <div className="mb-8">
-                <h2 className="text-2xl font-semibold text-zinc-900">
-                  Card Details
-                </h2>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Complete your payment of{" "}
-                  <span className="font-bold text-zinc-900">
-                    ${calculateTotal(amount)}
-                  </span>
+          {/* Purchase Button */}
+          <Card>
+            <CardContent className="flex items-center justify-between p-6">
+              <div>
+                <p className="text-lg font-semibold">
+                  {selectedPkg.credits} Credits
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  ₹{selectedPkg.amount} • Instant delivery
                 </p>
               </div>
+              <Button
+                size="lg"
+                onClick={handlePayment}
+                disabled={isLoading}
+                className="gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="h-4 w-4 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Purchase
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-5">
-                {/* Card Number */}
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-                    Card Number
-                  </label>
-                  <div className="group relative flex items-center rounded-xl border border-zinc-200 bg-white transition-all focus-within:border-zinc-950 focus-within:ring-1 focus-within:ring-zinc-950/10 hover:border-zinc-300">
-                    <div className="pl-4 text-zinc-400">
-                      <CreditCard className="h-5 w-5" />
-                    </div>
-                    <input
-                      type="text"
-                      value={cardNumber}
-                      onChange={handleCardNumberChange}
-                      placeholder="0000 0000 0000 0000"
-                      className="h-12 w-full bg-transparent px-4 font-mono text-sm text-zinc-900 outline-none placeholder:text-zinc-300"
-                    />
-                  </div>
-                </div>
-
-                {/* Name */}
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-                    Cardholder Name
-                  </label>
-                  <div className="rounded-xl border border-zinc-200 bg-white transition-all focus-within:border-zinc-950 focus-within:ring-1 focus-within:ring-zinc-950/10 hover:border-zinc-300">
-                    <input
-                      type="text"
-                      value={cardName}
-                      onChange={(e) => setCardName(e.target.value)}
-                      placeholder="JOHN DOE"
-                      className="h-12 w-full bg-transparent px-4 text-sm text-zinc-900 uppercase outline-none placeholder:text-zinc-300"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Expiry */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-                      Expiry
-                    </label>
-                    <div className="rounded-xl border border-zinc-200 bg-white transition-all focus-within:border-zinc-950 focus-within:ring-1 focus-within:ring-zinc-950/10 hover:border-zinc-300">
-                      <input
-                        type="text"
-                        value={expiry}
-                        onChange={handleExpiryChange}
-                        placeholder="MM/YY"
-                        className="h-12 w-full bg-transparent px-4 text-center font-mono text-sm text-zinc-900 outline-none placeholder:text-zinc-300"
-                      />
-                    </div>
-                  </div>
-                  {/* CVV */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-                      CVV
-                    </label>
-                    <div className="flex items-center rounded-xl border border-zinc-200 bg-white transition-all focus-within:border-zinc-950 focus-within:ring-1 focus-within:ring-zinc-950/10 hover:border-zinc-300">
-                      <input
-                        type="text"
-                        value={cvv}
-                        onChange={handleCvvChange}
-                        placeholder="123"
-                        className="h-12 w-full bg-transparent px-4 text-center font-mono text-sm text-zinc-900 outline-none placeholder:text-zinc-300"
-                      />
-                      <div className="pr-4 text-zinc-400">
-                        <Lock className="h-4 w-4" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8">
-                <button
-                  onClick={handlePayment}
-                  disabled={!cardNumber || !cardName || !expiry || !cvv}
-                  className="w-full rounded-xl bg-zinc-950 py-4 text-sm font-semibold text-white shadow-lg transition-all hover:bg-zinc-800 hover:shadow-xl hover:shadow-zinc-900/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Pay ${calculateTotal(amount)}
-                </button>
-              </div>
-            </div>
-          </Modal>
-        )}
-      </AnimatePresence>
-
-      <style jsx>{`
-        .slider-thumb::-webkit-slider-thumb {
-          appearance: none;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: white;
-          border: 2px solid #18181b;
-          cursor: pointer;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          transition: transform 0.1s;
-        }
-        .slider-thumb::-webkit-slider-thumb:hover {
-          transform: scale(1.1);
-        }
-        .slider-thumb::-moz-range-thumb {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: white;
-          border: 2px solid #18181b;
-          cursor: pointer;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          transition: transform 0.1s;
-        }
-      `}</style>
-    </div>
+          {/* Security Footer */}
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Secured by Razorpay • PCI DSS Compliant</span>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

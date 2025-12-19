@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -14,8 +15,10 @@ import {
 } from "@/components/ui/sidebar";
 import useProject from "@/hooks/use-project";
 import { cn } from "@/lib/utils";
+import { api } from "@/trpc/react";
 import {
   Bot,
+  Coins,
   CreditCard,
   LayoutDashboard,
   Plus,
@@ -53,10 +56,12 @@ export function AppSideBar() {
   const pathName = usePathname();
   const { open } = useSidebar();
   const { projects, projectId, setProjectId } = useProject();
+  const { data: credits } = api.project.getMyCredits.useQuery();
+  
   return (
     <Sidebar collapsible="icon" variant="floating">
       <SidebarHeader>
-        <div className="gap-2 self-center">
+        <div className="flex justify-center">
           <Image src="/logo.png" alt="logo" width={100} height={100}></Image>
         </div>
       </SidebarHeader>
@@ -132,6 +137,24 @@ export function AppSideBar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      {/* Credits Footer */}
+      {open && (
+        <SidebarFooter className="p-3">
+          <Link
+            href="/billing"
+            className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3 transition-all hover:bg-muted"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-zinc-200 text-zinc-600">
+              <Coins className="h-4 w-4" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold">{credits ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Credits</p>
+            </div>
+          </Link>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

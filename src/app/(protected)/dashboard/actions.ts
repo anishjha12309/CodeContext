@@ -5,10 +5,13 @@ import { createStreamableValue } from "@ai-sdk/rsc";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateEmbedding } from "@/lib/gemini";
 import { db } from "@/server/db";
+import { auth } from "@clerk/nextjs/server";
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
+
+const CREDITS_PER_QUESTION = 1;
 
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -46,6 +49,33 @@ export async function askQuestion(question: string, projectId: string) {
   const stream = createStreamableValue();
 
   try {
+    // Check user credits
+    const { userId } = await auth();
+    if (!userId) {
+      stream.update("You must be logged in to ask questions.");
+      stream.done();
+      return { output: stream.value, filesReferences: [] };
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { credits: true },
+    });
+
+    if (!user || user.credits < CREDITS_PER_QUESTION) {
+      stream.update(
+        `Insufficient credits. You need ${CREDITS_PER_QUESTION} credit to ask a question. Please purchase more credits from the Billing page.`,
+      );
+      stream.done();
+      return { output: stream.value, filesReferences: [] };
+    }
+
+    // Deduct credit before processing
+    await db.user.update({
+      where: { id: userId },
+      data: { credits: { decrement: CREDITS_PER_QUESTION } },
+    });
+
     const queryVector = await retryWithBackoff(
       () => generateEmbedding(question),
       3,

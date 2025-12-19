@@ -2,8 +2,21 @@ import z from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import { pollCommits } from "@/lib/github";
 import { indexGithubRepo } from "@/lib/github-loader";
+import { TRPCError } from "@trpc/server";
+
+// Credit costs
+const CREDITS_PER_PROJECT = 50;
+const CREDITS_PER_QUESTION = 1;
 
 export const projectRouter = createTRPCRouter({
+  getMyCredits: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.user.userId! },
+      select: { credits: true },
+    });
+    return user?.credits ?? 0;
+  }),
+
   createProject: protectedProcedure
     .input(
       z.object({
@@ -13,6 +26,19 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Check if user has enough credits
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.user.userId! },
+        select: { credits: true },
+      });
+
+      if (!user || user.credits < CREDITS_PER_PROJECT) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Insufficient credits. You need ${CREDITS_PER_PROJECT} credits to create a project. You have ${user?.credits ?? 0} credits.`,
+        });
+      }
+
       const project = await ctx.db.project.create({
         data: {
           githubUrl: input.githubUrl,
@@ -24,6 +50,13 @@ export const projectRouter = createTRPCRouter({
           },
         },
       });
+
+      // Deduct credits after successful creation
+      await ctx.db.user.update({
+        where: { id: ctx.user.userId! },
+        data: { credits: { decrement: CREDITS_PER_PROJECT } },
+      });
+
       await indexGithubRepo(project.id, input.githubUrl, input.githubToken);
       await pollCommits(project.id);
       return project;

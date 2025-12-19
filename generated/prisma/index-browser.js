@@ -203,6 +203,18 @@ exports.Prisma.IssueScalarFieldEnum = {
   meetingId: 'meetingId'
 };
 
+exports.Prisma.TransactionScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  razorpayOrderId: 'razorpayOrderId',
+  razorpayPaymentId: 'razorpayPaymentId',
+  razorpaySignature: 'razorpaySignature',
+  amount: 'amount',
+  credits: 'credits',
+  status: 'status',
+  userId: 'userId'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -233,6 +245,12 @@ exports.MeetingStatus = exports.$Enums.MeetingStatus = {
   COMPLETED: 'COMPLETED'
 };
 
+exports.TransactionStatus = exports.$Enums.TransactionStatus = {
+  PENDING: 'PENDING',
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   Project: 'Project',
@@ -241,7 +259,8 @@ exports.Prisma.ModelName = {
   Commit: 'Commit',
   SourceCodeEmbedding: 'SourceCodeEmbedding',
   Meeting: 'Meeting',
-  Issue: 'Issue'
+  Issue: 'Issue',
+  Transaction: 'Transaction'
 };
 
 /**

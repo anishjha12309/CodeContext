@@ -28,6 +28,7 @@ model User {
   credits        Int             @default(150)
   userToProjects UserToProject[]
   questionsAsked Question[]
+  transactions   Transaction[]
 }
 
 model Project {
@@ -137,4 +138,26 @@ model Issue {
 enum MeetingStatus {
   PROCESSING
   COMPLETED
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  razorpayOrderId   String  @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+
+  amount  Int // Amount in paise (INR cents)
+  credits Int // Credits purchased
+  status  TransactionStatus @default(PENDING)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
