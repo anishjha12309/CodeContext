@@ -187,36 +187,79 @@ export default function Home() {
             <div className="md:hidden">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="text-neutral-900"
+                className="flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 hover:bg-neutral-100 active:scale-95"
+                aria-label="Toggle menu"
               >
-                {mobileMenuOpen ? <X /> : <Menu />}
+                <div className="relative h-5 w-5">
+                  <span
+                    className={`absolute left-0 block h-0.5 w-5 transform bg-neutral-900 transition-all duration-300 ease-out ${
+                      mobileMenuOpen ? "top-2 rotate-45" : "top-0.5"
+                    }`}
+                  />
+                  <span
+                    className={`absolute left-0 top-2 block h-0.5 w-5 bg-neutral-900 transition-all duration-200 ${
+                      mobileMenuOpen ? "opacity-0" : "opacity-100"
+                    }`}
+                  />
+                  <span
+                    className={`absolute left-0 block h-0.5 w-5 transform bg-neutral-900 transition-all duration-300 ease-out ${
+                      mobileMenuOpen ? "top-2 -rotate-45" : "top-3.5"
+                    }`}
+                  />
+                </div>
               </button>
             </div>
           </div>
         </div>
 
         {/* Mobile Nav Dropdown */}
-        {mobileMenuOpen && (
-          <div className="border-b border-neutral-200 bg-white px-4 py-4 shadow-lg md:hidden">
-            <div className="flex flex-col space-y-4">
-              <a href="#" className="text-sm font-medium text-neutral-600">
+        <div
+          className={`absolute left-0 right-0 top-16 z-40 transform overflow-hidden border-b border-neutral-200 bg-white transition-all duration-300 ease-out md:hidden ${
+            mobileMenuOpen ? "max-h-64 opacity-100 shadow-lg" : "max-h-0 border-b-0 opacity-0"
+          }`}
+        >
+          <div className="container mx-auto px-4 py-3">
+            <nav className="flex flex-col">
+              <a
+                href="#"
+                className="rounded-md px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 Features
               </a>
               <a
                 href="#how-it-works"
-                className="text-sm font-medium text-neutral-600"
+                className="rounded-md px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+                onClick={() => setMobileMenuOpen(false)}
               >
                 How it Works
               </a>
+              <a
+                href="/billing"
+                className="rounded-md px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Pricing
+              </a>
+            </nav>
+            <div className="mt-2 flex items-center gap-2 border-t border-neutral-100 pt-3">
+              <Link
+                href="/sign-in"
+                className="flex-1 rounded-md px-3 py-2 text-center text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign in
+              </Link>
               <Button
-                className="w-full justify-center"
+                size="sm"
+                className="flex-1 justify-center rounded-md"
                 onClick={() => (window.location.href = "/dashboard")}
               >
                 Dashboard
               </Button>
             </div>
           </div>
-        )}
+        </div>
       </header>
 
       <main className="pt-24 sm:pt-32">
