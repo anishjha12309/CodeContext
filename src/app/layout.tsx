@@ -27,7 +27,7 @@ const robotoMono = Roboto_Mono({
 export const metadata: Metadata = {
   title: "CodeContext",
   description: "AI-powered codebase intelligence",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  icons: [{ rel: "icon", url: "/logo.ico" }],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
