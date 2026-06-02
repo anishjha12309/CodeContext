@@ -1,623 +1,550 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Logo } from "@/components/logo";
+import { HoverBorderGradient } from "@/components/ui/animated-border-button";
 import {
   ArrowRight,
-  MessageSquare,
-  FileSearch,
-  Zap,
-  Layers,
+  Bot,
+  GitBranch,
+  Mic,
+  Sparkles,
   Code2,
-  Cpu,
-  ChevronRight,
-  Menu,
-  X,
-  CheckCircle2,
+  MessageSquare,
+  Upload,
 } from "lucide-react";
-import Link from "next/link";
+import { SmoothScroll } from "@/components/smooth-scroll";
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?:
-    | "default"
-    | "destructive"
-    | "outline"
-    | "secondary"
-    | "ghost"
-    | "link";
-  size?: "default" | "sm" | "lg" | "icon";
-  children: React.ReactNode;
-}
-
-const Button: React.FC<ButtonProps> = ({
-  children,
-  variant = "default",
-  size = "default",
-  className = "",
-  ...props
-}) => {
-  const baseStyles =
-    "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-950 disabled:pointer-events-none disabled:opacity-50";
-
-  const variants = {
-    default: "bg-neutral-900 text-neutral-50 shadow hover:bg-neutral-900/90",
-    destructive: "bg-red-500 text-neutral-50 shadow-sm hover:bg-red-500/90",
-    outline:
-      "border border-neutral-200 bg-white shadow-sm hover:bg-neutral-100 hover:text-neutral-900",
-    secondary:
-      "bg-neutral-100 text-neutral-900 shadow-sm hover:bg-neutral-100/80",
-    ghost: "hover:bg-neutral-100 hover:text-neutral-900",
-    link: "text-neutral-900 underline-offset-4 hover:underline",
-  };
-
-  const sizes = {
-    default: "h-9 px-4 py-2",
-    sm: "h-8 rounded-md px-3 text-xs",
-    lg: "h-10 rounded-md px-8",
-    icon: "h-9 w-9",
-  };
+export default async function LandingPage() {
+  const { userId } = await auth();
+  if (userId) redirect("/dashboard");
 
   return (
-    <button
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-};
+    <SmoothScroll>
+      <div className="relative min-h-screen overflow-x-hidden bg-[#080808] text-white">
+        {/* ═══════════════════════════════════════════════════════
+          GLASSMORPHISM NAVBAR (Compact, floaty, centered pill)
+      ═══════════════════════════════════════════════════════ */}
+        <div className="fixed top-4 right-0 left-0 z-50 flex justify-center px-4">
+          <nav className="flex items-center gap-6 rounded-full border border-white/15 bg-white/10 px-6 py-2.5 shadow-lg shadow-black/10 backdrop-blur-xl">
+            <Link href="/" className="flex items-center gap-2">
+              <Logo className="h-5 w-auto text-white" />
+            </Link>
 
-interface BadgeProps {
-  children: React.ReactNode;
-  variant?: "default" | "secondary" | "outline";
-  className?: string;
-}
-
-const Badge: React.FC<BadgeProps> = ({
-  children,
-  variant = "default",
-  className = "",
-}) => {
-  const variants = {
-    default:
-      "border-transparent bg-neutral-900 text-neutral-50 hover:bg-neutral-900/80",
-    secondary:
-      "border-transparent bg-neutral-100 text-neutral-900 hover:bg-neutral-100/80",
-    outline: "text-neutral-950 border-neutral-200",
-  };
-  return (
-    <div
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2 focus:outline-none ${variants[variant]} ${className}`}
-    >
-      {children}
-    </div>
-  );
-};
-
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-}
-
-const Card: React.FC<CardProps> = ({ className = "", children, ...props }) => (
-  <div
-    className={`rounded-xl border border-neutral-200 bg-white text-neutral-950 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${className}`}
-    {...props}
-  >
-    {children}
-  </div>
-);
-
-const DotBackground = () => (
-  <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] [bg-size:16px_16px]"></div>
-);
-
-const Spotlight = () => (
-  <div className="pointer-events-none absolute -top-40 right-0 left-0 mx-auto h-[500px] w-full max-w-3xl bg-linear-to-b from-neutral-100 to-transparent opacity-40 blur-3xl"></div>
-);
-
-export default function Home() {
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
-
-  return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-white font-sans text-neutral-950 antialiased selection:bg-neutral-900 selection:text-white">
-      <DotBackground />
-      <Spotlight />
-
-      <header
-        className={`fixed top-0 z-50 w-full transition-all duration-200 ${scrolled ? "border-b border-neutral-200 bg-white/80 backdrop-blur-md" : "bg-transparent"}`}
-      >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div
-              className="flex cursor-pointer items-center gap-2"
-              onClick={scrollToTop}
-            >
-              <img src="/logo.png" alt="logo" className="h-8 w-auto sm:h-10" />
+            {/* Nav links */}
+            <div className="hidden items-center gap-6 md:flex">
+              {[
+                { label: "Features", href: "#features" },
+                { label: "AI Q&A", href: "#ask" },
+                { label: "Meetings", href: "#meetings" },
+              ].map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="text-[11px] tracking-widest text-white/70 uppercase transition-colors hover:text-white"
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {item.label}
+                </a>
+              ))}
             </div>
 
-            {/* Desktop Nav */}
-            <div className="hidden items-center gap-8 md:flex">
-              <nav className="flex gap-6">
-                <a
-                  href="#"
-                  className="text-sm font-medium text-neutral-600 transition-colors hover:text-black"
-                >
-                  Features
-                </a>
-                <a
-                  href="#how-it-works"
-                  className="text-sm font-medium text-neutral-600 transition-colors hover:text-black"
-                >
-                  How it Works
-                </a>
-                <a
-                  href="/billing"
-                  className="text-sm font-medium text-neutral-600 transition-colors hover:text-black"
-                >
-                  Pricing
-                </a>
-              </nav>
-              <div className="flex items-center gap-4 border-l border-neutral-200 pl-6">
-                <Link
-                  href="/sign-in"
-                  className="text-sm font-medium text-neutral-900 hover:text-neutral-700"
-                >
-                  Sign in
-                </Link>
-                <Button
-                  size="sm"
-                  onClick={() => (window.location.href = "/dashboard")}
-                  className="rounded-full px-6"
-                >
-                  Dashboard
-                </Button>
-              </div>
-            </div>
-
-            {/* Mobile Menu Toggle */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 hover:bg-neutral-100 active:scale-95"
-                aria-label="Toggle menu"
-              >
-                <div className="relative h-5 w-5">
-                  <span
-                    className={`absolute left-0 block h-0.5 w-5 transform bg-neutral-900 transition-all duration-300 ease-out ${
-                      mobileMenuOpen ? "top-2 rotate-45" : "top-0.5"
-                    }`}
-                  />
-                  <span
-                    className={`absolute left-0 top-2 block h-0.5 w-5 bg-neutral-900 transition-all duration-200 ${
-                      mobileMenuOpen ? "opacity-0" : "opacity-100"
-                    }`}
-                  />
-                  <span
-                    className={`absolute left-0 block h-0.5 w-5 transform bg-neutral-900 transition-all duration-300 ease-out ${
-                      mobileMenuOpen ? "top-2 -rotate-45" : "top-3.5"
-                    }`}
-                  />
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Nav Dropdown */}
-        <div
-          className={`absolute left-0 right-0 top-16 z-40 transform overflow-hidden border-b border-neutral-200 bg-white transition-all duration-300 ease-out md:hidden ${
-            mobileMenuOpen ? "max-h-64 opacity-100 shadow-lg" : "max-h-0 border-b-0 opacity-0"
-          }`}
-        >
-          <div className="container mx-auto px-4 py-3">
-            <nav className="flex flex-col">
-              <a
-                href="#"
-                className="rounded-md px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Features
-              </a>
-              <a
-                href="#how-it-works"
-                className="rounded-md px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                How it Works
-              </a>
-              <a
-                href="/billing"
-                className="rounded-md px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Pricing
-              </a>
-            </nav>
-            <div className="mt-2 flex items-center gap-2 border-t border-neutral-100 pt-3">
+            <div className="flex items-center gap-4">
               <Link
                 href="/sign-in"
-                className="flex-1 rounded-md px-3 py-2 text-center text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
-                onClick={() => setMobileMenuOpen(false)}
+                className="text-[11px] tracking-widest text-white/70 uppercase transition-colors hover:text-white"
+                style={{ fontFamily: "var(--font-mono)" }}
               >
-                Sign in
+                Log In
               </Link>
-              <Button
-                size="sm"
-                className="flex-1 justify-center rounded-md"
-                onClick={() => (window.location.href = "/dashboard")}
-              >
-                Dashboard
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="pt-24 sm:pt-32">
-        {/* Hero Section */}
-        <section className="relative container mx-auto px-4 pb-20 text-center sm:px-6 lg:px-8">
-          <div className="animate-in fade-in slide-in-from-bottom-4 mx-auto max-w-5xl duration-1000">
-            {/* Badge */}
-            <div className="mb-8 flex justify-center">
-              <Badge
-                variant="secondary"
-                className="gap-2 py-1 pr-3 pl-1 transition-colors hover:bg-neutral-200/50"
-              >
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-white">
-                  <Zap className="h-3 w-3" />
-                </div>
-                <span className="tracking-wide text-neutral-600">
-                  AI-Powered Code Intelligence v2.0
-                </span>
-              </Badge>
-            </div>
-
-            {/* Main Heading with Gradient Text */}
-            <h1 className="mb-8 text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-              Your Developer Co-Pilot for{" "}
-              <span className="bg-linear-to-b from-neutral-800 via-neutral-600 to-neutral-400 bg-clip-text text-transparent">
-                Complex Codebases
-              </span>
-            </h1>
-
-            <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-neutral-500 sm:text-xl">
-              Ask questions in natural language and get instant, contextual
-              answers about your entire project. No more endless searching
-              through files.
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button
-                size="lg"
-                className="h-12 w-full rounded-full px-8 text-base shadow-lg shadow-neutral-200 sm:w-auto"
-                onClick={() => (window.location.href = "/dashboard")}
+              <Link
+                href="/sign-up"
+                className="group flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] tracking-widest text-white uppercase backdrop-blur-md transition-all hover:border-white/30 hover:bg-white/20"
+                style={{ fontFamily: "var(--font-mono)" }}
               >
                 Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-12 w-full rounded-full border-neutral-200 px-8 text-base hover:bg-neutral-50 sm:w-auto"
-              >
-                Learn More
-              </Button>
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+              </Link>
             </div>
+          </nav>
+        </div>
 
-            {/* Glassmorphism Code Window (Aceternity Style) */}
-            <div className="relative mx-auto mt-20 max-w-5xl rounded-2xl border border-neutral-200 bg-white/50 p-2 shadow-[0_0_50px_-12px_rgba(0,0,0,0.1)] backdrop-blur-xl">
-              <div className="overflow-hidden rounded-xl bg-neutral-950 p-4 text-left font-mono text-sm shadow-inner sm:p-8 sm:text-base">
-                <div className="mb-4 flex gap-2 border-b border-neutral-800 pb-4">
-                  <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                  <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-                  <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                  <div className="ml-auto text-xs text-neutral-500">
-                    bash &mdash; 80x24
-                  </div>
-                </div>
-                <div className="space-y-3 font-light">
-                  <div className="flex">
-                    <span className="mr-4 w-6 text-right text-neutral-600 select-none">
-                      1
-                    </span>
-                    <span className="text-green-400">
-                      $ ai analyze --repo ./my-complex-project
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="mr-4 w-6 text-right text-neutral-600 select-none">
-                      2
-                    </span>
-                    <span className="text-neutral-300">
-                      Indexing 1,402 files...{" "}
-                      <span className="text-neutral-500">[Done 0.4s]</span>
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="mr-4 w-6 text-right text-neutral-600 select-none">
-                      3
-                    </span>
-                    <span className="text-neutral-300">
-                      Understanding dependency graph...{" "}
-                      <span className="text-neutral-500">[Done 0.2s]</span>
-                    </span>
-                  </div>
-                  <div className="flex py-2">
-                    <span className="mr-4 w-6 text-right text-neutral-600 select-none">
-                      4
-                    </span>
-                    <span className="flex items-center gap-2 text-white">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500"></span>
-                      User: &quot;Explain how the authentication middleware
-                      handles JWT expiry&quot;
-                    </span>
-                  </div>
-                  <div className="ml-9 flex rounded border-l border-neutral-800 bg-neutral-900/50 p-2 pl-10">
-                    <span className="text-xs leading-relaxed text-neutral-400">
-                      Based on{" "}
-                      <span className="text-blue-400 underline underline-offset-2">
-                        /src/middleware/auth.ts
-                      </span>{" "}
-                      lines 45-82:
-                      <br />
-                      The middleware checks the `exp` claim. If expired, it
-                      attempts to refresh using the `refreshToken` stored in
-                      HttpOnly cookies before throwing a 401.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Features Section (Bento Grid Style) */}
-        <section className="container mx-auto px-4 py-24 sm:px-6 lg:px-8">
-          <div className="mb-16 max-w-2xl">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
-              Built for scale &amp; complexity.
-            </h2>
-            <p className="text-lg text-neutral-500">
-              Our engine digests your entire repository to provide context-aware
-              answers that simple LLMs miss.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {/* Large Card */}
-            <Card className="group relative flex flex-col justify-between overflow-hidden p-8 md:col-span-2">
-              <div className="absolute top-0 right-0 h-64 w-64 rounded-bl-full bg-linear-to-bl from-neutral-100 to-transparent opacity-50 transition-transform duration-500 group-hover:scale-110"></div>
-              <div>
-                <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50">
-                  <MessageSquare className="h-5 w-5 text-neutral-900" />
-                </div>
-                <h3 className="mb-2 text-xl font-semibold">
-                  Natural Language Queries
-                </h3>
-                <p className="max-w-md text-neutral-500">
-                  Stop grepping. Ask &quot;How does the payment retry logic
-                  work?&quot; and get a plain English explanation with pointers.
-                </p>
-              </div>
-              <div className="mt-8 flex gap-2">
-                <Badge
-                  variant="secondary"
-                  className="border border-neutral-200 bg-white"
-                >
-                  Semantic Search
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="border border-neutral-200 bg-white"
-                >
-                  Context Aware
-                </Badge>
-              </div>
-            </Card>
-
-            {/* Tall Card with Pretty Code Snippet */}
-            <Card className="group border-neutral-900 bg-neutral-950 p-8 text-white md:row-span-2">
-              <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-neutral-800 text-white">
-                <Layers className="h-5 w-5" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">Traceable Insights</h3>
-              <p className="mb-8 text-neutral-400">
-                No hallucinations. Every answer is cited with direct links to
-                the specific lines of code.
-              </p>
-              <div className="relative h-40 w-full overflow-hidden rounded border border-neutral-800 bg-neutral-900 p-3 font-mono text-xs">
-                <div className="space-y-1 text-neutral-400">
-                  <div className="text-yellow-500">{`{`}</div>
-                  <div className="pl-2">
-                    <span className="text-blue-400">&quot;file&quot;</span>:{" "}
-                    <span className="text-green-400">
-                      &quot;payment_svc.ts&quot;
-                    </span>
-                    ,
-                  </div>
-                  <div className="pl-2">
-                    <span className="text-blue-400">&quot;context&quot;</span>:{" "}
-                    <span className="text-green-400">
-                      &quot;retry logic&quot;
-                    </span>
-                    ,
-                  </div>
-                  <div className="pl-2">
-                    <span className="text-blue-400">&quot;lines&quot;</span>: [
-                    <span className="text-purple-400">120</span>,{" "}
-                    <span className="text-purple-400">145</span>],
-                  </div>
-                  <div className="pl-2">
-                    <span className="text-blue-400">
-                      &quot;confidence&quot;
-                    </span>
-                    : <span className="text-purple-400">0.98</span>
-                  </div>
-                  <div className="text-yellow-500">{`}`}</div>
-                </div>
-                <div className="absolute right-3 bottom-3 text-[10px] text-neutral-600">
-                  source_map.json
-                </div>
-              </div>
-            </Card>
-
-            {/* Regular Card */}
-            <Card className="group relative overflow-hidden p-8">
-              <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-blue-50 blur-2xl transition-colors group-hover:bg-blue-100"></div>
-              <div className="relative z-10">
-                <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50">
-                  <FileSearch className="h-5 w-5 text-neutral-900" />
-                </div>
-                <h3 className="mb-2 text-xl font-semibold">
-                  GitHub Integration
-                </h3>
-                <p className="text-neutral-500">
-                  Connect any public or private GitHub repository. Your codebase is 
-                  instantly indexed and ready for exploration.
-                </p>
-              </div>
-            </Card>
-
-            {/* Regular Card */}
-            <Card className="group relative overflow-hidden p-8">
-              <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-purple-50 blur-2xl transition-colors group-hover:bg-purple-100"></div>
-              <div className="relative z-10">
-                <div className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50">
-                  <Zap className="h-5 w-5 text-neutral-900" />
-                </div>
-                <h3 className="mb-2 text-xl font-semibold">
-                  Credit-Based Pricing
-                </h3>
-                <p className="text-neutral-500">
-                  Pay only for what you use. No subscriptions, no hidden fees. 
-                  Purchase credits and use them whenever you need.
-                </p>
-              </div>
-            </Card>
-          </div>
-        </section>
-
-        {/* Steps Section */}
+        {/* ═══════════════════════════════════════════════════════
+          SECTION 1 — HERO (Sky background, Origin-style)
+      ═══════════════════════════════════════════════════════ */}
         <section
-          className="border-y border-neutral-100 bg-neutral-50/50 py-24"
-          id="how-it-works"
+          id="hero"
+          className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
         >
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
-                How it Works
-              </h2>
-              <p className="text-neutral-500">
-                Simple integration. Powerful results.
+          {/* Sky hero background */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: "url('/sky-hero.png')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+          />
+          <div className="hero-overlay absolute inset-0" />
+
+          <div className="relative z-10 mx-auto max-w-4xl px-6 pt-24 text-center">
+            {/* Headline */}
+            <h1
+              className="text-hero mb-8 text-5xl leading-[1.1] font-light tracking-tight text-white sm:text-6xl lg:text-7xl"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              <em className="font-normal italic">Understand</em> your codebase.
+            </h1>
+
+            {/* Subtitle */}
+            <div className="text-hero-sm mb-4 space-y-1">
+              <p
+                className="text-base font-medium text-white"
+                style={{ fontFamily: "var(--font-sans)" }}
+              >
+                CodeContext is your AI-powered codebase companion.
+              </p>
+              <p
+                className="mx-auto max-w-lg text-sm text-white/80"
+                style={{ fontFamily: "var(--font-sans)" }}
+              >
+                Connect a GitHub repo, ask questions in plain English, and get
+                answers grounded in your actual code — plus meeting
+                transcription and team Q&A.
               </p>
             </div>
 
-            <div className="relative grid gap-8 md:grid-cols-3">
-              {/* Connecting Line (Desktop) */}
-              <div className="absolute top-12 right-[16%] left-[16%] -z-10 hidden h-0.5 bg-linear-to-r from-neutral-200 via-neutral-200 to-neutral-200 md:block"></div>
+            {/* CTA */}
+            <div className="mt-10 mb-10 flex justify-center">
+              <Link
+                href="/sign-up"
+                className="btn-glow group inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-7 py-3 text-xs font-medium tracking-widest text-white uppercase backdrop-blur-md transition-all duration-300 hover:border-white/35 hover:bg-white/20"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                Get Started
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
 
+            {/* Search bar */}
+            <Link
+              href="/sign-up"
+              className="mx-auto flex max-w-xl items-center rounded-2xl border border-white/10 bg-white/10 px-6 py-4 shadow-lg shadow-black/5 backdrop-blur-lg transition-all duration-300 hover:border-white/20 hover:bg-white/15"
+            >
+              <span
+                className="flex-1 text-left text-sm text-white/70"
+                style={{ fontFamily: "var(--font-sans)" }}
+              >
+                How does the authentication flow work?
+              </span>
+              <div className="ml-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 text-white/80">
+                <ArrowRight className="h-4 w-4 -rotate-45" />
+              </div>
+            </Link>
+
+            {/* Tagline */}
+            <p
+              className="text-hero-sm mt-8 text-sm font-medium text-white/80"
+              style={{ fontFamily: "var(--font-sans)" }}
+            >
+              Track everything. Ask anything.
+            </p>
+
+            {/* Feature pills */}
+            <div className="mt-6 flex flex-wrap justify-center gap-4">
               {[
-                {
-                  title: "Connect",
-                  desc: "Link your GitHub repository",
-                  icon: Code2,
-                },
-                { title: "Analyze", desc: "AI indexes your codebase", icon: Cpu },
-                {
-                  title: "Ask",
-                  desc: "Get contextual answers",
-                  icon: MessageSquare,
-                },
-              ].map((step, i) => (
+                { icon: GitBranch, label: "GitHub repo analysis" },
+                { icon: Bot, label: "AI codebase Q&A" },
+                { icon: Mic, label: "Meeting transcription" },
+              ].map(({ icon: Icon, label }) => (
                 <div
-                  key={i}
-                  className="flex flex-col items-center bg-white/0 text-center md:bg-transparent"
+                  key={label}
+                  className="flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs text-white/90 backdrop-blur-md"
+                  style={{ fontFamily: "var(--font-mono)" }}
                 >
-                  <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-neutral-900 text-white shadow-xl ring-1 ring-neutral-100">
-                    <step.icon className="h-8 w-8" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-bold text-neutral-900">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-neutral-500">{step.desc}</p>
+                  <Icon className="h-3.5 w-3.5 text-sky-300" />
+                  {label}
                 </div>
               ))}
             </div>
+
+            {/* Footer note */}
+            <p
+              className="text-hero-sm mt-8 text-[10px] tracking-wider text-white/50 uppercase"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Powered by Groq · Cerebras · Gemini · Supabase — all free, no
+              credit card required
+            </p>
           </div>
         </section>
 
-        {/* CTA Section (Inverted) */}
-        <section className="container mx-auto px-4 py-24 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-neutral-900 px-6 py-24 text-center shadow-2xl sm:px-16">
-            {/* Abstract background shapes */}
-            <div className="absolute top-0 right-0 -mt-20 -mr-20 h-80 w-80 rounded-full bg-neutral-800 opacity-50 blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-80 w-80 rounded-full bg-neutral-700 opacity-50 blur-3xl"></div>
+        {/* ═══════════════════════════════════════════════════════
+          SECTION 2 — "Explore your code" (Chart visualization like Origin's Forecast)
+      ═══════════════════════════════════════════════════════ */}
+        <section
+          id="features"
+          className="relative scroll-mt-16 bg-gradient-to-b from-[#080808] via-[#0a1628] to-[#080808] py-28"
+        >
+          <div className="mx-auto max-w-5xl px-6 text-center">
+            <h2
+              className="mb-4 text-4xl leading-tight font-light text-white sm:text-5xl lg:text-6xl"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              <em className="font-normal italic">Explore</em> your code
+            </h2>
+            <p
+              className="mx-auto mb-6 max-w-lg text-sm leading-relaxed text-zinc-400"
+              style={{ fontFamily: "var(--font-sans)" }}
+            >
+              Watch your codebase come alive — track commits indexed, questions
+              answered, and insights generated over time.
+            </p>
 
-            <div className="relative z-10 mx-auto max-w-3xl">
-              <h2 className="mb-6 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
-                Ready to understand your codebase?
-              </h2>
-              <p className="mx-auto mb-10 max-w-xl text-lg text-neutral-300">
-                Stop wasting hours searching through files. Connect your repository 
-                and start asking questions in natural language.
-              </p>
-              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="h-12 rounded-full bg-white px-8 text-neutral-900 hover:bg-neutral-200"
-                  onClick={() => (window.location.href = "/dashboard")}
-                >
-                  Get Started Now
-                </Button>
-                <div className="flex items-center gap-2 text-sm text-neutral-400 sm:ml-4">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Pay-as-you-go credits</span>
+            {/* Chart visualization card */}
+            <div className="glass-strong mt-14 rounded-2xl p-6 text-left sm:p-8">
+              <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p
+                    className="mb-1 text-[10px] tracking-widest text-zinc-500 uppercase"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    Files Indexed
+                  </p>
+                  <p
+                    className="text-2xl font-semibold text-white"
+                    style={{ fontFamily: "var(--font-sans)" }}
+                  >
+                    12,847
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-neutral-400">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>No subscriptions</span>
+                <div className="text-right">
+                  <p
+                    className="mb-1 text-[10px] tracking-widest text-zinc-500 uppercase"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    Questions Answered
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <p
+                      className="text-2xl font-semibold text-white"
+                      style={{ fontFamily: "var(--font-sans)" }}
+                    >
+                      3,291
+                    </p>
+                    <span className="text-xs text-emerald-400">↗</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">
+                    +842 this month (34%)
+                  </p>
+                </div>
+              </div>
+
+              {/* SVG Chart */}
+              <div className="relative">
+                <svg
+                  viewBox="0 0 800 200"
+                  className="h-auto w-full"
+                  preserveAspectRatio="none"
+                >
+                  {/* Grid lines */}
+                  <line
+                    x1="0"
+                    y1="50"
+                    x2="800"
+                    y2="50"
+                    stroke="rgba(255,255,255,0.04)"
+                    strokeWidth="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="100"
+                    x2="800"
+                    y2="100"
+                    stroke="rgba(255,255,255,0.04)"
+                    strokeWidth="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="150"
+                    x2="800"
+                    y2="150"
+                    stroke="rgba(255,255,255,0.04)"
+                    strokeWidth="1"
+                  />
+
+                  {/* Area fill */}
+                  <defs>
+                    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgba(14,165,233,0.3)" />
+                      <stop offset="100%" stopColor="rgba(14,165,233,0)" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M0,180 C50,175 100,170 150,155 C200,140 250,130 300,110 C350,95 380,90 420,75 C460,60 500,50 550,45 C600,35 650,30 700,25 C750,20 780,18 800,15 L800,200 L0,200 Z"
+                    fill="url(#areaGrad)"
+                  />
+
+                  {/* Line */}
+                  <path
+                    d="M0,180 C50,175 100,170 150,155 C200,140 250,130 300,110 C350,95 380,90 420,75 C460,60 500,50 550,45 C600,35 650,30 700,25 C750,20 780,18 800,15"
+                    fill="none"
+                    stroke="#0ea5e9"
+                    strokeWidth="2"
+                  />
+
+                  {/* Data point circles */}
+                  <circle
+                    cx="300"
+                    cy="110"
+                    r="6"
+                    fill="#080808"
+                    stroke="#0ea5e9"
+                    strokeWidth="2"
+                  />
+                  <circle
+                    cx="550"
+                    cy="45"
+                    r="6"
+                    fill="#080808"
+                    stroke="#0ea5e9"
+                    strokeWidth="2"
+                  />
+                </svg>
+
+                {/* X-axis labels */}
+                <div className="mt-3 flex justify-between px-1">
+                  {[
+                    "Week 1",
+                    "Week 2",
+                    "Week 3",
+                    "Week 4",
+                    "Week 5",
+                    "Week 6",
+                  ].map((w) => (
+                    <span
+                      key={w}
+                      className="text-[9px] tracking-wider text-zinc-600 uppercase"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      {w}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Y-axis labels */}
+                <div className="absolute top-0 right-0 bottom-8 flex flex-col justify-between pr-1 text-right">
+                  {["3K", "2K", "1K", "500"].map((v) => (
+                    <span
+                      key={v}
+                      className="text-[9px] text-zinc-600"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      {v}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         </section>
-      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-neutral-100 bg-white py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-            <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="logo" className="h-6 w-auto" />
+        {/* ═══════════════════════════════════════════════════════
+          SECTION 3 — Two-column feature showcase
+      ═══════════════════════════════════════════════════════ */}
+        <section className="relative bg-[#080808] py-28">
+          <div className="mx-auto max-w-5xl px-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Card 1 — AI Q&A */}
+              <div
+                id="ask"
+                className="group relative scroll-mt-16 overflow-hidden rounded-2xl border border-sky-500/15 bg-linear-to-br from-sky-950/40 via-[#0c1220] to-[#080808] p-7 transition-all duration-500 hover:border-sky-500/30 hover:shadow-[0_0_40px_rgba(14,165,233,0.08)]"
+              >
+                {/* Corner glow on hover */}
+                <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl transition-opacity duration-500 opacity-0 group-hover:opacity-100" />
+
+                <h3
+                  className="mb-2 text-2xl font-light text-white sm:text-3xl"
+                  style={{ fontFamily: "var(--font-serif)" }}
+                >
+                  <em className="font-normal italic">See</em> instant answers
+                </h3>
+                <p
+                  className="mb-6 text-sm leading-relaxed text-zinc-400"
+                  style={{ fontFamily: "var(--font-sans)" }}
+                >
+                  Ask questions in plain English — get precise, source-grounded
+                  answers in seconds.
+                </p>
+
+                {/* Mock Q&A card */}
+                <div className="glass space-y-3 rounded-xl p-4 transition-all duration-300 group-hover:bg-white/6">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 transition-colors duration-300 group-hover:bg-sky-500/20">
+                      <Bot className="h-3.5 w-3.5 text-sky-400" />
+                    </div>
+                    <div>
+                      <p
+                        className="mb-1 text-xs text-zinc-500"
+                        style={{ fontFamily: "var(--font-mono)" }}
+                      >
+                        AI Answer
+                      </p>
+                      <p className="text-sm leading-relaxed text-zinc-300">
+                        The auth module uses{" "}
+                        <code className="rounded bg-white/8 px-1.5 py-0.5 text-xs text-sky-300">
+                          middleware.ts
+                        </code>{" "}
+                        to validate JWT tokens on every protected route. Clerk
+                        handles OAuth for social logins, while refresh tokens
+                        rotate via…
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 border-t border-white/6 pt-3">
+                    <span
+                      className="text-[10px] text-zinc-600"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      3 files referenced
+                    </span>
+                    <span className="text-[10px] text-zinc-600">•</span>
+                    <span
+                      className="text-[10px] text-emerald-500"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      98% confidence
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2 — Meeting summaries */}
+              <div
+                id="meetings"
+                className="group relative scroll-mt-16 overflow-hidden rounded-2xl border border-violet-500/15 bg-linear-to-br from-violet-950/40 via-[#130d20] to-[#080808] p-7 transition-all duration-500 hover:border-violet-500/30 hover:shadow-[0_0_40px_rgba(139,92,246,0.08)]"
+              >
+                {/* Corner glow on hover */}
+                <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-violet-500/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
+                <h3
+                  className="mb-2 text-2xl font-light text-white sm:text-3xl"
+                  style={{ fontFamily: "var(--font-serif)" }}
+                >
+                  <em className="font-normal italic">Capture</em> every meeting
+                </h3>
+                <p
+                  className="mb-6 text-sm leading-relaxed text-zinc-400"
+                  style={{ fontFamily: "var(--font-sans)" }}
+                >
+                  Upload recordings and get AI-generated summaries with key
+                  decisions and action items.
+                </p>
+
+                {/* Mock meeting card */}
+                <div className="glass space-y-3 rounded-xl p-4 transition-all duration-300 group-hover:bg-white/6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-emerald-400" />
+                      <span className="text-xs font-medium text-white">
+                        Sprint Planning — June 2
+                      </span>
+                    </div>
+                    <span
+                      className="text-[10px] text-zinc-600"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      47 min
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { chapter: "API Migration", time: "0:00 – 12:30" },
+                      { chapter: "Auth Refactor", time: "12:30 – 28:15" },
+                      { chapter: "Component Ownership", time: "28:15 – 47:00" },
+                    ].map((item) => (
+                      <div
+                        key={item.chapter}
+                        className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2"
+                      >
+                        <span className="text-xs text-zinc-300">
+                          {item.chapter}
+                        </span>
+                        <span
+                          className="text-[10px] text-zinc-600"
+                          style={{ fontFamily: "var(--font-mono)" }}
+                        >
+                          {item.time}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 border-t border-white/6 pt-3">
+                    <Sparkles className="h-3 w-3 text-sky-400" />
+                    <span
+                      className="text-[10px] text-zinc-500"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      3 action items extracted
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm text-neutral-500 md:justify-end">
-              <a href="#" className="transition-colors hover:text-neutral-900">
-                Privacy Policy
-              </a>
-              <a href="#" className="transition-colors hover:text-neutral-900">
-                Terms of Service
-              </a>
-              <a href="#" className="transition-colors hover:text-neutral-900">
-                Twitter
-              </a>
-              <a href="#" className="transition-colors hover:text-neutral-900">
-                GitHub
-              </a>
-            </div>
-            <p className="text-xs text-neutral-400">© 2025 CodeContext Inc.</p>
           </div>
-        </div>
-      </footer>
-    </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════
+          SECTION 4 — Final CTA
+      ═══════════════════════════════════════════════════════ */}
+        <section className="relative bg-linear-to-b from-[#080808] via-[#0a0d14] to-[#080808] py-28">
+          {/* Top divider line */}
+          <div className="absolute top-0 left-1/2 h-px w-[300px] -translate-x-1/2 bg-linear-to-r from-transparent via-white/10 to-transparent" />
+          {/* Bottom divider line */}
+          <div className="absolute bottom-0 left-1/2 h-px w-[300px] -translate-x-1/2 bg-linear-to-r from-transparent via-white/8 to-transparent" />
+          {/* Sky ambient glow */}
+          <div className="absolute top-1/2 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-500/6 blur-[140px]" />
+          <div className="absolute top-1/2 right-0 h-[300px] w-[300px] -translate-y-1/2 rounded-full bg-violet-600/4 blur-[100px]" />
+
+          <div className="relative mx-auto max-w-3xl px-6 text-center">
+            <h2
+              className="mb-4 text-4xl leading-tight font-light text-white sm:text-5xl lg:text-6xl"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              <em className="font-normal italic">Start</em> building today
+            </h2>
+            <p
+              className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-zinc-400"
+              style={{ fontFamily: "var(--font-sans)" }}
+            >
+              Join developers who use CodeContext to understand, navigate, and
+              collaborate on codebases faster than ever.
+            </p>
+
+            <div className="flex justify-center">
+              <HoverBorderGradient as={Link} href="/sign-up">
+                Get Started — Free
+                <ArrowRight className="h-3.5 w-3.5" />
+              </HoverBorderGradient>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════
+          FOOTER — Origin-style multi-column
+      ═══════════════════════════════════════════════════════ */}
+        <footer className="border-t border-white/6 bg-[#080808] pt-10 pb-10">
+          <div className="mx-auto max-w-5xl px-6">
+            <div className="mb-6 flex items-center">
+              <Logo className="h-6 w-auto text-[#fafafa]" />
+              <span className="text-sm font-semibold text-white">
+                CodeContext
+              </span>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </SmoothScroll>
   );
 }

@@ -1,12 +1,11 @@
+"use client";
+
 import { useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 
-const useRefetch = () => {
+export function useRefetch() {
   const queryClient = useQueryClient();
-  return async () => {
-    await queryClient.refetchQueries({
-      type: "active",
-    });
-  };
-};
-
-export default useRefetch;
+  return useCallback(async () => {
+    await queryClient.refetchQueries();
+  }, [queryClient]);
+}

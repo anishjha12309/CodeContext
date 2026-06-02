@@ -1,47 +1,47 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+function getUrl() {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL!;
+}
+function getAnonKey() {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+}
+function getServiceKey() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY!;
+}
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Lazy browser client singleton — used for file uploads on the client side
+let _browserClient: SupabaseClient | null = null;
+export function getBrowserSupabase() {
+  if (!_browserClient) {
+    _browserClient = createClient(getUrl(), getAnonKey());
+  }
+  return _browserClient;
+}
+
+// Server-side admin client — bypasses RLS, created fresh per call
+export function createAdminSupabase() {
+  return createClient(getUrl(), getServiceKey(), {
+    auth: { persistSession: false },
+  });
+}
 
 export async function uploadFile(
   file: File,
   setProgress?: (progress: number) => void,
 ): Promise<string> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const uniqueFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+  const client = getBrowserSupabase();
+  const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
 
-      if (setProgress) {
-        setProgress(0);
-        console.log("Upload starting...");
-      }
+  if (setProgress) setProgress(0);
 
-      const { data, error } = await supabase.storage
-        .from("meetings")
-        .upload(uniqueFileName, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+  const { error } = await client.storage
+    .from("meetings")
+    .upload(uniqueName, file, { cacheControl: "3600", upsert: false });
 
-      if (error) {
-        throw error;
-      }
+  if (error) throw error;
+  if (setProgress) setProgress(100);
 
-      if (setProgress) {
-        setProgress(100);
-        console.log("Upload complete");
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("meetings")
-        .getPublicUrl(uniqueFileName);
-
-      resolve(publicUrlData.publicUrl);
-    } catch (error) {
-      console.error("Supabase Upload Error:", error);
-      reject(error);
-    }
-  });
+  const { data } = client.storage.from("meetings").getPublicUrl(uniqueName);
+  return data.publicUrl;
 }

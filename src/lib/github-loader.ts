@@ -1,760 +1,282 @@
-import { GithubRepoLoader } from "@langchain/community/document_loaders/web/github";
-import { summariseCode, batchSummariseCode } from "./gemini";
-import { Document } from "@langchain/core/documents";
+import { Octokit } from "octokit";
+import { batchSummariseCode } from "./cerebras";
 import { generateEmbedding } from "./gemini";
-import { db } from "@/server/db";
+import { createAdminSupabase } from "./supabase";
 
-// Sanitize strings to remove null bytes and control characters that PostgreSQL cannot handle
-function sanitizeForPostgres(str: string | null | undefined): string {
-  if (!str) return "";
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-  // Remove null bytes and control characters (except newline, tab, carriage return)
-  return str
-    .replace(/\0/g, "") // Remove null bytes (0x00)
-    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ""); // Remove other control chars
+const MAX_FILES = 50;
+const CONTENT_MIN = 50;
+const CONTENT_MAX = 50_000;
+
+const SKIP_PATTERNS = [
+  /\.env/,
+  /package-lock\.json/,
+  /yarn\.lock/,
+  /pnpm-lock/,
+  /bun\.lock/,
+  /node_modules\//,
+  /\.next\//,
+  /dist\//,
+  /build\//,
+  /coverage\//,
+  /generated\//,
+  /\.min\./,
+  /\.d\.ts$/,
+  /\.map$/,
+  /\.snap$/,
+  /\.(png|jpg|jpeg|gif|svg|ico|webp|avif|bmp)$/,
+  /\.(woff2?|ttf|eot|otf)$/,
+  /\.(mp[34]|wav|ogg|mov|avi|webm|flac)$/,
+  /\.(zip|tar|gz|rar|7z)$/,
+  /\.(pdf|docx?|xlsx?)$/,
+  /\.(css|scss|sass|less)$/,
+  /readme\.md$/i,
+  /changelog\.md$/i,
+  /license/i,
+  /\.gitignore$/,
+  /\.prettierrc/,
+  /eslint\.config/,
+  /tsconfig\.json$/,
+  /next\.config/,
+  /tailwind\.config/,
+  /postcss\.config/,
+  /\.(test|spec)\./,
+  /__tests__\//,
+  /\.github\//,
+  /Dockerfile/,
+];
+
+function shouldSkip(path: string): boolean {
+  return SKIP_PATTERNS.some((p) => p.test(path));
 }
 
-function parseGithubUrl(githubUrl: string): { owner: string; repo: string } {
-  const cleanUrl = githubUrl
-    .trim()
-    .replace(/\/$/, "")
-    .replace(/\.git$/, "");
-
-  const match = cleanUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-
-  if (!match || !match[1] || !match[2]) {
-    throw new Error(`Invalid GitHub URL format: ${githubUrl}`);
-  }
-
-  return {
-    owner: match[1],
-    repo: match[2],
-  };
+function sanitize(str: string): string {
+  return str.replace(/\0/g, "").replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 }
 
-async function verifyGithubRepo(owner: string, repo: string, token?: string) {
-  const headers: HeadersInit = {
-    Accept: "application/vnd.github.v3+json",
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}`,
-      {
-        headers,
-      },
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        `GitHub API error: ${response.status} ${response.statusText}. ` +
-          `Message: ${(errorData as any).message || "Unknown error"}`,
-      );
-    }
-
-    const data = await response.json();
-    return {
-      exists: true,
-      isPrivate: data.private,
-      defaultBranch: data.default_branch,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Failed to verify repository: ${String(error)}`);
-  }
+function parseGithubUrl(url: string): { owner: string; repo: string } {
+  const clean = url.trim().replace(/\/$/, "").replace(/\.git$/, "");
+  const match = clean.match(/github\.com\/([^/]+)\/([^/]+)/);
+  if (!match?.[1] || !match?.[2]) throw new Error(`Invalid GitHub URL: ${url}`);
+  return { owner: match[1], repo: match[2] };
 }
 
-export const loadGithubRepo = async (
-  githubUrl: string,
-  githubToken?: string,
-) => {
-  console.log(`Loading GitHub repo: ${githubUrl}`);
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  const { owner, repo } = parseGithubUrl(githubUrl);
-  console.log(`Parsed: owner=${owner}, repo=${repo}`);
-
-  const token = githubToken || process.env.GITHUB_TOKEN;
-
-  if (!token) {
-    console.warn("⚠️  No GitHub token provided. Private repos will fail.");
-  }
-
-  const repoInfo = await verifyGithubRepo(owner, repo, token);
-  console.log(`Repository verified:`, repoInfo);
-
-  if (repoInfo.isPrivate && !token) {
-    throw new Error(
-      "This is a private repository but no GitHub token was provided. " +
-        "Please provide a valid GitHub token with repo access.",
-    );
-  }
-
-  const branch = repoInfo.defaultBranch || "main";
-  console.log(`Using branch: ${branch}`);
-
-  try {
-    const loader = new GithubRepoLoader(githubUrl, {
-      accessToken: token || "",
-      branch: branch,
-      ignoreFiles: [
-        // Lock files (keep these ignored)
-        "package-lock.json",
-        "yarn.lock",
-        "pnpm-lock.yaml",
-        "bun.lockb",
-
-        // Images (keep these ignored)
-        "*.svg",
-        "*.png",
-        "*.jpg",
-        "*.jpeg",
-        "*.gif",
-        "*.ico",
-        "*.webp",
-        "*.avif",
-
-        // Fonts (keep these ignored)
-        "*.woff",
-        "*.woff2",
-        "*.ttf",
-        "*.eot",
-        "*.otf",
-
-        // Documents (keep these ignored)
-        "*.pdf",
-
-        // Build outputs and dependencies (keep these ignored)
-        "**/node_modules/**",
-        "**/dist/**",
-        "**/build/**",
-        "**/.next/**",
-        "**/.turbo/**",
-        "**/out/**",
-        "**/.output/**",
-        "**/coverage/**",
-        "**/.nuxt/**",
-
-        // Git and IDE (keep these ignored)
-        ".git/**",
-        ".gitignore",
-        ".vscode/**",
-        ".idea/**",
-
-        // Other binary/media files (keep these ignored)
-        "*.mp4",
-        "*.mp3",
-        "*.mov",
-        "*.avi",
-        "*.zip",
-        "*.tar",
-        "*.gz",
-        "*.rar",
-
-        // Minified files (keep these ignored)
-        "*.min.js",
-        "*.min.css",
-        "*.bundle.js",
-      ],
-      recursive: true,
-      unknown: "warn",
-      maxConcurrency: 5,
-    });
-
-    console.log(`Starting to load documents...`);
-    const docs = await loader.load();
-    console.log(`✓ Loaded ${docs.length} documents`);
-
-    if (docs.length === 0) {
-      console.warn(
-        "⚠️  No documents loaded. Repository might be empty or all files are ignored.",
-      );
-    }
-
-    return docs;
-  } catch (error) {
-    console.error("Error loading GitHub repo:", error);
-
-    if (error instanceof Error) {
-      if (error.message.includes("404")) {
-        throw new Error(
-          `Repository not found or branch "${branch}" doesn't exist. ` +
-            `Please check the URL and ensure the repository is accessible.`,
-        );
-      } else if (error.message.includes("401")) {
-        throw new Error(
-          "Authentication failed. Please provide a valid GitHub token with repo access.",
-        );
-      } else if (error.message.includes("403")) {
-        throw new Error(
-          "Access forbidden. This could be due to rate limiting or insufficient permissions. " +
-            "Ensure your GitHub token has the necessary scopes (repo for private repos).",
-        );
-      }
-    }
-
-    throw error;
-  }
-};
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const withRetry = async <T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  context = "",
-): Promise<T | null> => {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+async function withRetry<T>(fn: () => Promise<T>, label = ""): Promise<T | null> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       return await fn();
-    } catch (error: any) {
-      const is429 =
-        error?.message?.includes("429") || error?.message?.includes("quota");
-      const isLastAttempt = attempt === maxRetries;
-
-      if (is429) {
-        const retryMatch = error?.message?.match(/retry in ([\d.]+)s/);
-        const retryDelay = retryMatch
-          ? parseFloat(retryMatch[1]) * 1000
-          : 60000;
-
-        if (isLastAttempt) {
-          console.error(`❌ ${context}: Failed after ${maxRetries} attempts`);
-          return null;
-        }
-
-        console.log(
-          `⏳ ${context}: Rate limited. Waiting ${Math.ceil(retryDelay / 1000)}s (attempt ${attempt}/${maxRetries})...`,
-        );
-        await delay(retryDelay);
+    } catch (err: any) {
+      const is429 = err?.message?.includes("429") || err?.message?.includes("quota");
+      if (is429 && attempt < 3) {
+        await delay(attempt * 5000);
       } else {
-        console.error(`✗ ${context}: ${error?.message || error}`);
+        console.error(`✗ ${label}:`, err?.message ?? err);
         return null;
       }
     }
   }
   return null;
-};
+}
 
-// Maximum files to process (to stay within API daily limits)
-const MAX_FILES_TO_PROCESS = 50;
-
-const shouldProcessFile = (doc: Document): boolean => {
-  const source = doc.metadata.source?.toLowerCase() || "";
-  const content = doc.pageContent || "";
-
-  // Skip patterns - all the files we should NOT process
-  const skipPatterns = [
-    // Environment and secrets
-    /\.env$/,
-    /\.env\./,
-    /\.env\.local/,
-    /\.env\.example/,
-
-    // Lock files
-    /package-lock\.json/,
-    /yarn\.lock/,
-    /pnpm-lock\.yaml/,
-    /bun\.lock/,
-    /bun\.lockb/,
-    /composer\.lock/,
-    /Gemfile\.lock/,
-    /poetry\.lock/,
-    /Cargo\.lock/,
-
-    // Dependencies and build
-    /node_modules\//,
-    /vendor\//,
-    /\.next\//,
-    /dist\//,
-    /build\//,
-    /out\//,
-    /\.output\//,
-    /coverage\//,
-    /\.turbo\//,
-    /\.nuxt\//,
-    /\.cache\//,
-
-    // Generated/minified
-    /\.min\./,
-    /\.bundle\./,
-    /\.generated\./,
-    /prisma\/client/,
-    /@prisma\/client/,
-    /generated\//,
-
-    // Binary files
-    /\.wasm$/,
-    /\.dll$/,
-    /\.node$/,
-    /\.dylib$/,
-    /\.so$/,
-    /\.exe$/,
-    /\.bin$/,
-    /\.pyc$/,
-    /\.pyo$/,
-    /\.class$/,
-    /\.o$/,
-    /\.a$/,
-
-    // Images
-    /\.png$/,
-    /\.jpg$/,
-    /\.jpeg$/,
-    /\.gif$/,
-    /\.svg$/,
-    /\.ico$/,
-    /\.webp$/,
-    /\.avif$/,
-    /\.bmp$/,
-    /\.tiff?$/,
-
-    // Fonts
-    /\.woff2?$/,
-    /\.ttf$/,
-    /\.eot$/,
-    /\.otf$/,
-
-    // Media
-    /\.mp[34]$/,
-    /\.wav$/,
-    /\.ogg$/,
-    /\.mov$/,
-    /\.avi$/,
-    /\.webm$/,
-
-    // Archives
-    /\.zip$/,
-    /\.tar$/,
-    /\.gz$/,
-    /\.rar$/,
-    /\.7z$/,
-
-    // Documents
-    /\.pdf$/,
-    /\.doc[x]?$/,
-    /\.xls[x]?$/,
-    /\.ppt[x]?$/,
-
-    // ===== NON-CODE FILES TO SKIP =====
-
-    // CSS/Styling (not useful for code understanding)
-    /\.css$/,
-    /\.scss$/,
-    /\.sass$/,
-    /\.less$/,
-    /\.styl$/,
-    /tailwind\.config/,
-    /postcss\.config/,
-    /styles?\//,  // entire styles folders
-
-    // README and docs
-    /readme\.md$/,
-    /readme\.txt$/,
-    /changelog\.md$/,
-    /history\.md$/,
-    /contributing\.md$/,
-    /code_of_conduct\.md$/,
-    /license\.md$/,
-    /license\.txt$/,
-    /license$/,
-    /authors$/,
-    /contributors$/,
-    /docs?\//,  // docs folders
-
-    // Config files (low value for understanding code logic)
-    /\.gitignore$/,
-    /\.gitattributes$/,
-    /\.editorconfig$/,
-    /\.prettierrc/,
-    /\.prettierignore/,
-    /\.eslintrc/,
-    /\.eslintignore/,
-    /eslint\.config/,
-    /prettier\.config/,
-    /biome\.json$/,
-    /\.stylelintrc/,
-    /\.browserslistrc$/,
-    /\.nvmrc$/,
-    /\.node-version$/,
-    /\.ruby-version$/,
-    /\.python-version$/,
-    /\.tool-versions$/,
-    /tsconfig\.json$/,
-    /jsconfig\.json$/,
-    /next\.config/,
-    /vite\.config/,
-    /webpack\.config/,
-    /rollup\.config/,
-    /babel\.config/,
-    /\.babelrc/,
-    /jest\.config/,
-    /vitest\.config/,
-    /playwright\.config/,
-    /cypress\.config/,
-    /karma\.conf/,
-    /\.huskyrc/,
-    /\.lintstagedrc/,
-    /commitlint\.config/,
-    /renovate\.json$/,
-    /dependabot\.yml$/,
-    /\.github\//,  // GitHub workflows etc
-    /\.circleci\//,
-    /\.gitlab-ci/,
-    /Dockerfile$/,
-    /docker-compose/,
-    /\.dockerignore$/,
-    /Makefile$/,
-    /Procfile$/,
-    /netlify\.toml$/,
-    /vercel\.json$/,
-
-    // Test files (usually not needed for understanding main logic)
-    /\.test\./,
-    /\.spec\./,
-    /_test\./,
-    /_spec\./,
-    /\.stories\./,
-    /\.story\./,
-    /__tests__\//,
-    /__mocks__\//,
-    /__fixtures__\//,
-    /test\//,
-    /tests\//,
-    /spec\//,
-    /specs\//,
-    /e2e\//,
-    /cypress\//,
-    /playwright\//,
-
-    // Type definitions (auto-generated, low value)
-    /\.d\.ts$/,
-    /@types\//,
-    /types\.ts$/,  // pure type files
-
-    // Declaration files
-    /\.map$/,  // source maps
-    /\.snap$/,  // jest snapshots
-  ];
-
-  if (skipPatterns.some((pattern) => pattern.test(source))) {
-    console.log(`⏭️  Skipping (pattern): ${source}`);
-    return false;
-  }
-
-  // Skip files that are too large (likely generated or data files)
-  if (content.length > 50000) {
-    console.log(`⏭️  Skipping (too large: ${Math.round(content.length / 1000)}KB): ${source}`);
-    return false;
-  }
-
-  // Skip files that are too small (likely empty or trivial)
-  if (content.length < 50) {
-    console.log(`⏭️  Skipping (too small): ${source}`);
-    return false;
-  }
-
-  return true;
-};
-
-const generateEmbeddings = async (docs: Document[]) => {
-  const filteredDocs = docs.filter(shouldProcessFile);
-  console.log(
-    `📝 Filtered: ${filteredDocs.length}/${docs.length} files will be processed`,
-  );
-
-  if (filteredDocs.length === 0) {
-    console.log("⚠️  No files to process after filtering");
-    return [];
-  }
-
-  // Check if repo is too large for free tier limits
-  if (filteredDocs.length > MAX_FILES_TO_PROCESS) {
-    const errorMessage = `Repository too large: ${filteredDocs.length} files to process exceeds the limit of ${MAX_FILES_TO_PROCESS} files. ` +
-      `This is due to Gemini API free tier daily limits (20 requests/day). ` +
-      `Consider using a smaller repository or upgrading to a paid API tier.`;
-    console.error(`❌ ${errorMessage}`);
-    throw new Error(errorMessage);
-  }
-
-  console.log(`✅ Repository size OK: ${filteredDocs.length}/${MAX_FILES_TO_PROCESS} files (within limits)`);
-
-  // ============================================
-  // PHASE 1: Generate all summaries (BATCHED - 10 files per API call)
-  // ============================================
-  const SUMMARY_BATCH_SIZE = 10; // 10 files per API call = 10x reduction in calls
-  const GENERATION_DELAY = 4100; // 4.1s between batches to stay under 15 RPM
-  
-  const totalBatches = Math.ceil(filteredDocs.length / SUMMARY_BATCH_SIZE);
-  const apiCalls = totalBatches;
-  
-  console.log(`\n📝 PHASE 1: Generating summaries for ${filteredDocs.length} files...`);
-  console.log(`⚡ BATCHED: ${SUMMARY_BATCH_SIZE} files per API call = ${apiCalls} total API calls`);
-  console.log(`⚠️  Rate limit: 15 RPM (one batch every 4 seconds)`);
-  
-  const estimatedSummaryTimeMin = Math.ceil((totalBatches * GENERATION_DELAY) / 60000);
-  console.log(`⏱️  Estimated time for summaries: ~${estimatedSummaryTimeMin} minutes (${Math.round(filteredDocs.length / totalBatches)}x faster than sequential!)`);
-
-  const summaries: Array<{ doc: Document; summary: string; fileName: string }> = [];
-
-  for (let batchIdx = 0; batchIdx < filteredDocs.length; batchIdx += SUMMARY_BATCH_SIZE) {
-    const batch = filteredDocs.slice(batchIdx, batchIdx + SUMMARY_BATCH_SIZE);
-    const batchNum = Math.floor(batchIdx / SUMMARY_BATCH_SIZE) + 1;
-    
-    console.log(`\n  📦 Batch ${batchNum}/${totalBatches}: Processing ${batch.length} files`);
-    batch.forEach((doc, i) => {
-      console.log(`    ${i + 1}. ${doc.metadata.source || 'unknown'}`);
-    });
-    
-    // Prepare files for batch call
-    const filesToSummarize = batch.map(doc => ({
-      fileName: doc.metadata.source || 'unknown',
-      code: doc.pageContent,
-    }));
-    
-    // Make single API call for entire batch
-    const batchSummaries = await withRetry(
-      () => batchSummariseCode(filesToSummarize),
-      3,
-      `Batch ${batchNum} (${batch.length} files)`,
-    );
-    
-    if (batchSummaries && batchSummaries.length === batch.length) {
-      // Match summaries back to documents
-      for (let i = 0; i < batch.length; i++) {
-        const doc = batch[i]!;
-        const summary = batchSummaries[i];
-        const fileName = doc.metadata.source || 'unknown';
-        
-        if (summary && summary.trim().length > 0) {
-          summaries.push({ doc, summary, fileName });
-        } else {
-          console.warn(`    ⚠️  Empty summary for ${fileName}`);
-        }
-      }
-      console.log(`  ✓ Batch ${batchNum} complete: ${batchSummaries.length} summaries`);
-    } else {
-      console.warn(`  ⚠️  Batch ${batchNum} failed, skipping ${batch.length} files`);
-    }
-    
-    // Delay before next batch (except for last one)
-    if (batchIdx + SUMMARY_BATCH_SIZE < filteredDocs.length) {
-      const remainingBatches = totalBatches - batchNum;
-      const remainingMin = Math.ceil((remainingBatches * GENERATION_DELAY) / 60000);
-      console.log(`  ⏳ Next batch in 4s... (${remainingBatches} batches, ~${remainingMin}min left)`);
-      await delay(GENERATION_DELAY);
-    }
-  }
-
-  console.log(`\n✅ PHASE 1 complete: ${summaries.length}/${filteredDocs.length} summaries generated`);
-
-  if (summaries.length === 0) {
-    console.log("⚠️  No summaries generated");
-    return [];
-  }
-
-  // ============================================
-  // PHASE 2: Generate all embeddings (1500 RPM limit)
-  // ============================================
-  console.log(`\n🔢 PHASE 2: Generating embeddings for ${summaries.length} files...`);
-  console.log(`⚡ Rate limit: 1500 RPM (batches of 25 per second)`);
-  
-  const EMBEDDING_BATCH_SIZE = 25;
-  const EMBEDDING_BATCH_DELAY = 1100; // 1.1s between batches of 25 = ~1360 RPM (under 1500)
-  const embeddings: Array<{
-    summary: string;
-    embedding: number[];
-    sourceCode: string;
-    fileName: string;
-  }> = [];
-
-  for (let i = 0; i < summaries.length; i += EMBEDDING_BATCH_SIZE) {
-    const batch = summaries.slice(i, i + EMBEDDING_BATCH_SIZE);
-    const batchNum = Math.floor(i / EMBEDDING_BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(summaries.length / EMBEDDING_BATCH_SIZE);
-    
-    console.log(`  📦 Embedding batch ${batchNum}/${totalBatches} (${batch.length} files)`);
-
-    // Process batch in parallel
-    const batchPromises = batch.map(async ({ doc, summary, fileName }) => {
-      const embedding = await withRetry(
-        () => generateEmbedding(summary),
-        3,
-        `Embedding for ${fileName}`,
-      );
-
-      if (!embedding) {
-        console.warn(`  ⚠️  Failed embedding for ${fileName}`);
-        return null;
-      }
-
-      return {
-        summary,
-        embedding,
-        sourceCode: JSON.parse(JSON.stringify(doc.pageContent)),
-        fileName,
-      };
-    });
-
-    const batchResults = await Promise.all(batchPromises);
-    const validResults = batchResults.filter((r): r is NonNullable<typeof r> => r !== null);
-    embeddings.push(...validResults);
-
-    console.log(`  ✓ Batch ${batchNum}: ${validResults.length}/${batch.length} succeeded`);
-
-    // Small delay between batches
-    if (i + EMBEDDING_BATCH_SIZE < summaries.length) {
-      await delay(EMBEDDING_BATCH_DELAY);
-    }
-  }
-
-  console.log(`\n✅ PHASE 2 complete: ${embeddings.length}/${summaries.length} embeddings generated`);
-  
-  return embeddings;
-};
-
-export const indexGithubRepo = async (
+export async function indexGithubRepo(
   projectId: string,
   githubUrl: string,
   githubToken?: string,
-) => {
-  console.log(`\n🔄 Starting indexing for project ${projectId}`);
-  console.log(`Repository: ${githubUrl}`);
+) {
+  const { owner, repo } = parseGithubUrl(githubUrl);
+  const token = githubToken ?? process.env.GITHUB_TOKEN;
+  const client = new Octokit({ auth: token });
 
-  try {
-    const docs = await loadGithubRepo(githubUrl, githubToken);
+  console.log(`\n🔄 Indexing ${owner}/${repo}`);
 
-    if (docs.length === 0) {
-      console.log("⚠️  No documents to index");
-      return { indexed: 0, failed: 0 };
-    }
+  // Get default branch
+  const { data: repoData } = await client.rest.repos.get({ owner, repo });
+  const branch = repoData.default_branch;
 
-    console.log(`\n📊 Generating embeddings for ${docs.length} files...`);
-    const estimatedTimeMin = Math.ceil(((docs.length / 3) * 12) / 60);
-    console.log(
-      `⏱️  Estimated time: ~${estimatedTimeMin} minutes (due to rate limits)`,
-    );
+  // Get the full file tree
+  const { data: ref } = await client.rest.git.getRef({
+    owner,
+    repo,
+    ref: `heads/${branch}`,
+  });
 
-    const allEmbeddings = await generateEmbeddings(docs);
+  const { data: tree } = await client.rest.git.getTree({
+    owner,
+    repo,
+    tree_sha: ref.object.sha,
+    recursive: "1",
+  });
 
-    if (allEmbeddings.length === 0) {
-      console.log("⚠️  No embeddings generated");
-      return { indexed: 0, failed: 0 };
-    }
+  // Filter files
+  const candidates = tree.tree.filter(
+    (item) =>
+      item.type === "blob" &&
+      item.path &&
+      !shouldSkip(item.path) &&
+      (item.size ?? 0) >= CONTENT_MIN &&
+      (item.size ?? 0) <= CONTENT_MAX,
+  );
 
-    console.log(
-      `\n💾 Saving ${allEmbeddings.length} embeddings to database...`,
-    );
+  const files = candidates.slice(0, MAX_FILES);
+  console.log(`📝 ${files.length} files to process (${candidates.length} candidates)`);
 
-    const sanitizedEmbeddings = allEmbeddings.map((embedding) => ({
-      summary: sanitizeForPostgres(embedding.summary),
-      sourceCode: sanitizeForPostgres(embedding.sourceCode),
-      fileName: sanitizeForPostgres(embedding.fileName),
-      projectId,
-    }));
+  if (files.length === 0) return { indexed: 0, failed: 0 };
 
-    console.log("Creating database records...");
+  // ── PHASE 1: Fetch file contents (batches of 10) ──────────────────
+  console.log("\n📥 Phase 1: Fetching file contents…");
+  type FileEntry = { path: string; content: string };
+  const fetched: FileEntry[] = [];
 
-    try {
-      await db.sourceCodeEmbedding.createMany({
-        data: sanitizedEmbeddings,
-        skipDuplicates: true,
-      });
-      console.log(
-        `✓ Bulk insert successful: ${sanitizedEmbeddings.length} records`,
-      );
-    } catch (bulkError: any) {
-      console.warn("⚠️  Bulk insert failed, attempting individual inserts...");
-      console.error("Bulk error:", bulkError?.message || bulkError);
-
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const embedding of sanitizedEmbeddings) {
+  const FETCH_BATCH = 10;
+  for (let i = 0; i < files.length; i += FETCH_BATCH) {
+    const batch = files.slice(i, i + FETCH_BATCH);
+    const results = await Promise.all(
+      batch.map(async (file) => {
         try {
-          await db.sourceCodeEmbedding.create({
-            data: embedding,
+          const { data } = await client.rest.repos.getContent({
+            owner,
+            repo,
+            path: file.path!,
+            ref: branch,
           });
-          successCount++;
-        } catch (individualError: any) {
-          failCount++;
-          console.error(
-            `✗ Failed to insert ${embedding.fileName}:`,
-            individualError?.message || individualError,
-          );
+          if (Array.isArray(data) || !("content" in data)) return null;
+          const text = Buffer.from(data.content, "base64").toString("utf-8");
+          return { path: file.path!, content: text } satisfies FileEntry;
+        } catch {
+          return null;
         }
-      }
+      }),
+    );
+    fetched.push(...results.filter((r): r is FileEntry => r !== null));
+    if (i + FETCH_BATCH < files.length) await delay(500);
+  }
 
-      console.log(
-        `Individual inserts complete: ${successCount} succeeded, ${failCount} failed`,
-      );
+  console.log(`✓ Fetched ${fetched.length} files`);
 
-      if (successCount === 0) {
-        throw new Error(
-          "All individual inserts failed. Database operation aborted.",
-        );
+  // ── PHASE 2: Generate summaries via Cerebras (parallel, high TPM) ──
+  console.log("\n🤖 Phase 2: Generating summaries via Cerebras…");
+
+  // Cerebras free tier: 8K context, 60-100K TPM → process in parallel batches
+  const SUMMARY_BATCH = 10;
+  const summaries: Array<{ path: string; content: string; summary: string }> = [];
+
+  for (let i = 0; i < fetched.length; i += SUMMARY_BATCH) {
+    const batch = fetched.slice(i, i + SUMMARY_BATCH);
+    const batchNum = Math.floor(i / SUMMARY_BATCH) + 1;
+    const total = Math.ceil(fetched.length / SUMMARY_BATCH);
+    console.log(`  Batch ${batchNum}/${total}: ${batch.length} files`);
+
+    const results = await withRetry(
+      () =>
+        batchSummariseCode(
+          batch.map((f) => ({ fileName: f.path, code: f.content })),
+        ),
+      `Summary batch ${batchNum}`,
+    );
+
+    if (results) {
+      for (let j = 0; j < batch.length; j++) {
+        const file = batch[j]!;
+        summaries.push({
+          path: file.path,
+          content: file.content,
+          summary: results[j] ?? "",
+        });
       }
     }
 
-    console.log("Fetching created records...");
-    const records = await db.sourceCodeEmbedding.findMany({
-      where: {
-        projectId,
-        fileName: { in: sanitizedEmbeddings.map((e) => e.fileName) },
-      },
-      select: {
-        id: true,
-        fileName: true,
-      },
+    // Small delay to avoid bursting Cerebras
+    if (i + SUMMARY_BATCH < fetched.length) await delay(1000);
+  }
+
+  console.log(`✓ ${summaries.length} summaries generated`);
+
+  // ── PHASE 3: Generate embeddings via Gemini (batches of 25, 1500 RPM) ──
+  console.log("\n🔢 Phase 3: Generating embeddings via Gemini…");
+
+  const EMBED_BATCH = 25;
+  const EMBED_DELAY = 1200;
+  type EmbedEntry = {
+    project_id: string;
+    file_name: string;
+    source_code: string;
+    summary: string;
+    embedding: number[];
+  };
+  const embeddings: EmbedEntry[] = [];
+
+  for (let i = 0; i < summaries.length; i += EMBED_BATCH) {
+    const batch = summaries.slice(i, i + EMBED_BATCH);
+    const batchNum = Math.floor(i / EMBED_BATCH) + 1;
+    const total = Math.ceil(summaries.length / EMBED_BATCH);
+    console.log(`  Embedding batch ${batchNum}/${total}`);
+
+    const results = await Promise.all(
+      batch.map(async (item) => {
+        const vec = await withRetry(
+          () => generateEmbedding(item.summary || item.path),
+          `Embedding ${item.path}`,
+        );
+        if (!vec) return null;
+        return {
+          project_id: projectId,
+          file_name: sanitize(item.path),
+          source_code: sanitize(item.content),
+          summary: sanitize(item.summary),
+          embedding: vec,
+        } satisfies EmbedEntry;
+      }),
+    );
+
+    embeddings.push(...results.filter((r): r is EmbedEntry => r !== null));
+    if (i + EMBED_BATCH < summaries.length) await delay(EMBED_DELAY);
+  }
+
+  console.log(`✓ ${embeddings.length} embeddings generated`);
+
+  // ── PHASE 4: Save to Supabase ─────────────────────────────────────
+  console.log("\n💾 Phase 4: Saving to Supabase…");
+  const supabase = createAdminSupabase();
+
+  let indexed = 0;
+  let failed = 0;
+
+  // Insert records first (without embedding vector)
+  const rows = embeddings.map(({ embedding: _vec, ...rest }) => rest);
+
+  const { data: inserted, error: insertErr } = await supabase
+    .from("source_code_embeddings")
+    .insert(rows)
+    .select("id, file_name");
+
+  if (insertErr) {
+    console.error("Bulk insert failed:", insertErr.message);
+    return { indexed: 0, failed: embeddings.length };
+  }
+
+  // Update each row with its vector using raw SQL via RPC
+  for (const record of inserted ?? []) {
+    const entry = embeddings.find(
+      (e) => sanitize(e.file_name) === record.file_name,
+    );
+    if (!entry) { failed++; continue; }
+
+    const { error } = await supabase.rpc("set_embedding", {
+      p_id: record.id,
+      p_embedding: `[${entry.embedding.join(",")}]`,
     });
 
-    console.log(`Updating ${records.length} vector embeddings...`);
-    let indexed = 0;
-    let failed = 0;
-
-    for (const record of records) {
-      const embedding = allEmbeddings.find(
-        (e) => sanitizeForPostgres(e.fileName) === record.fileName,
-      );
-
-      if (!embedding) {
-        console.warn(`⚠️  No embedding found for ${record.fileName}`);
-        failed++;
-        continue;
-      }
-
-      try {
-        await db.$executeRaw`
-          UPDATE "SourceCodeEmbedding"
-          SET "summaryEmbedding" = ${embedding.embedding}::vector
-          WHERE "id" = ${record.id}
-        `;
-        indexed++;
-
-        if (indexed % 10 === 0) {
-          console.log(`  Updated ${indexed}/${records.length} embeddings...`);
-        }
-      } catch (error: any) {
-        failed++;
-        console.error(
-          `✗ Failed to update embedding for ${record.fileName}:`,
-          error?.message || error,
-        );
-      }
+    if (error) {
+      failed++;
+      console.error(`✗ Vector update failed for ${record.file_name}:`, error.message);
+    } else {
+      indexed++;
     }
-
-    console.log(
-      `\n✅ Indexing complete: ${indexed} succeeded, ${failed} failed`,
-    );
-    return { indexed, failed };
-  } catch (error) {
-    console.error("\n❌ Indexing failed:", error);
-    throw error;
   }
-};
+
+  console.log(`\n✅ Indexed ${indexed}, failed ${failed}`);
+  return { indexed, failed };
+}

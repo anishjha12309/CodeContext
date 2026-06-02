@@ -1,13 +1,12 @@
-import { db } from "@/server/db";
 import { Octokit } from "octokit";
-import axios from "axios";
-import { aiSummariseCommit } from "./gemini";
+import { createAdminSupabase } from "./supabase";
+import { summariseCommit } from "./groq";
 
 export const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 });
 
-type Response = {
+type CommitData = {
   commitHash: string;
   commitMessage: string;
   commitAuthorName: string;
@@ -15,243 +14,143 @@ type Response = {
   commitDate: string;
 };
 
-export const getCommitHashes = async (
-  githubUrl: string,
-): Promise<Response[]> => {
+export async function getCommitHashes(githubUrl: string): Promise<CommitData[]> {
   const [owner, repo] = githubUrl.split("/").slice(-2);
-  if (!owner || !repo) {
-    throw new Error("Invalid github url");
-  }
-  const { data } = await octokit.rest.repos.listCommits({
-    owner,
-    repo,
-  });
+  if (!owner || !repo) throw new Error("Invalid GitHub URL");
 
-  const sortedCommits = data.sort(
-    (a: any, b: any) =>
-      new Date(b.commit.author.date).getTime() -
-      new Date(a.commit.author.date).getTime(),
-  ) as any[];
+  const { data } = await octokit.rest.repos.listCommits({ owner, repo, per_page: 15 });
 
-  return sortedCommits.slice(0, 10).map((commit: any) => ({
-    commitHash: commit.sha as string,
-    commitMessage: commit.commit?.message ?? "",
-    commitAuthorName: commit.commit?.author?.name ?? "",
-    commitAuthorAvatar: commit?.author?.avatar_url ?? "",
-    commitDate: commit.commit?.author?.date ?? "",
-  }));
-};
+  return data
+    .sort(
+      (a, b) =>
+        new Date(b.commit.author?.date ?? 0).getTime() -
+        new Date(a.commit.author?.date ?? 0).getTime(),
+    )
+    .slice(0, 10)
+    .map((c) => ({
+      commitHash: c.sha,
+      commitMessage: c.commit.message ?? "",
+      commitAuthorName: c.commit.author?.name ?? "",
+      commitAuthorAvatar: c.author?.avatar_url ?? "",
+      commitDate: c.commit.author?.date ?? new Date().toISOString(),
+    }));
+}
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const withRetry = async <T>(
+async function withRetry<T>(
   fn: () => Promise<T>,
-  maxRetries = 3,
-  context = "",
-): Promise<T | null> => {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  retries = 3,
+  label = "",
+): Promise<T | null> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       return await fn();
-    } catch (error: any) {
+    } catch (err: any) {
       const is429 =
-        error?.message?.includes("429") ||
-        error?.message?.includes("quota") ||
-        error?.message?.includes("Too Many Requests");
-      const isLastAttempt = attempt === maxRetries;
-
-      if (is429) {
-        // Try to extract retry delay from error message
-        const retryMatch = error?.message?.match(/retry in ([\d.]+)s/);
-        const retryDelay = retryMatch
-          ? parseFloat(retryMatch[1]) * 1000
-          : 60000; // Default to 60 seconds
-
-        if (isLastAttempt) {
-          console.error(`❌ ${context}: Failed after ${maxRetries} attempts`);
-          return null;
-        }
-
-        console.log(
-          `⏳ ${context}: Rate limited. Waiting ${Math.ceil(retryDelay / 1000)}s (attempt ${attempt}/${maxRetries})...`,
-        );
-        await delay(retryDelay);
+        err?.message?.includes("429") ||
+        err?.message?.includes("quota") ||
+        err?.message?.includes("Too Many Requests");
+      if (is429 && attempt < retries) {
+        const wait = (attempt === 1 ? 4 : 8) * 1000;
+        console.log(`⏳ ${label}: rate limited, retrying in ${wait / 1000}s`);
+        await delay(wait);
       } else {
-        console.error(`✗ ${context}: ${error?.message || error}`);
+        console.error(`✗ ${label}:`, err?.message ?? err);
         return null;
       }
     }
   }
   return null;
-};
+}
 
-export const pollCommits = async (projectId: string) => {
-  const { project, githubUrl } = await fetchProjectGithubUrl(projectId);
-  const commitHashes = await getCommitHashes(githubUrl);
-  const unprocessedCommits = await filterUnprocessedCommits(
-    projectId,
-    commitHashes,
-  );
-
-  console.log(`Found ${unprocessedCommits.length} unprocessed commits`);
-
-  if (unprocessedCommits.length === 0) {
-    console.log("No commits to process");
-    return { count: 0 };
+async function fetchDiff(githubUrl: string, commitHash: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${githubUrl}/commit/${commitHash}.diff`, {
+      headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) return null;
+    return await response.text();
+  } catch {
+    return null;
   }
+}
 
-  const commitsToCreate: Array<{
-    projectId: string;
-    commitHash: string;
-    commitMessage: string;
-    commitAuthorName: string;
-    commitAuthorAvatar: string;
-    commitDate: string;
+export async function pollCommits(projectId: string) {
+  const supabase = createAdminSupabase();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("github_url")
+    .eq("id", projectId)
+    .single();
+
+  if (!project?.github_url) throw new Error("Project has no GitHub URL");
+
+  const hashes = await getCommitHashes(project.github_url);
+
+  const { data: existing } = await supabase
+    .from("commits")
+    .select("commit_hash")
+    .eq("project_id", projectId);
+
+  const existingHashes = new Set((existing ?? []).map((c) => c.commit_hash));
+  const unprocessed = hashes.filter((h) => !existingHashes.has(h.commitHash));
+
+  if (unprocessed.length === 0) return { count: 0 };
+  console.log(`Processing ${unprocessed.length} new commits…`);
+
+  const toInsert: Array<{
+    project_id: string;
+    commit_hash: string;
+    commit_message: string;
+    commit_author_name: string;
+    commit_author_avatar: string;
+    commit_date: string;
     summary: string;
   }> = [];
 
-  // Process 2 commits in parallel (safe at 15 RPM = 7.5 RPM effective rate)
-  const PARALLEL_COMMITS = 2;
-  const DELAY_BETWEEN_BATCHES = 4100; // 4.1s to stay under 15 RPM
+  // Process 2 at a time to stay under Groq 30 RPM
+  const BATCH = 2;
+  const BATCH_DELAY = 4200;
 
-  console.log(
-    `⚡ Processing commits in parallel (${PARALLEL_COMMITS} at a time, 4s between batches)`,
-  );
-  const estimatedTimeMin = Math.ceil(
-    (Math.ceil(unprocessedCommits.length / PARALLEL_COMMITS) * DELAY_BETWEEN_BATCHES) / 60000,
-  );
-  console.log(`⏱️  Estimated time: ~${estimatedTimeMin} minutes`);
+  for (let i = 0; i < unprocessed.length; i += BATCH) {
+    const batch = unprocessed.slice(i, i + BATCH);
 
-  for (let i = 0; i < unprocessedCommits.length; i += PARALLEL_COMMITS) {
-    const batch = unprocessedCommits.slice(i, i + PARALLEL_COMMITS);
-    const batchNum = Math.floor(i / PARALLEL_COMMITS) + 1;
-    const totalBatches = Math.ceil(unprocessedCommits.length / PARALLEL_COMMITS);
+    const results = await Promise.all(
+      batch.map(async (commit) => {
+        const diff = await fetchDiff(project.github_url, commit.commitHash);
+        if (!diff) return null;
 
-    console.log(`\n📦 Batch ${batchNum}/${totalBatches}: Processing ${batch.length} commits`);
+        const summary = await withRetry(
+          () => summariseCommit(diff),
+          3,
+          commit.commitHash.slice(0, 7),
+        );
 
-    // Process batch in parallel
-    const batchPromises = batch.map(async (commit) => {
-      console.log(`  → ${commit.commitHash.slice(0, 7)}: Generating summary...`);
-      
-      const summary = await withRetry(
-        () => summariseCommit(githubUrl, commit.commitHash),
-        3,
-        `Commit ${commit.commitHash.slice(0, 7)}`,
-      );
-
-      if (summary) {
-        console.log(`  ✓ ${commit.commitHash.slice(0, 7)}: Summary complete`);
         return {
-          projectId: projectId,
-          commitHash: commit.commitHash,
-          commitMessage: commit.commitMessage,
-          commitAuthorName: commit.commitAuthorName,
-          commitAuthorAvatar: commit.commitAuthorAvatar,
-          commitDate: commit.commitDate,
-          summary: summary,
+          project_id: projectId,
+          commit_hash: commit.commitHash,
+          commit_message: commit.commitMessage,
+          commit_author_name: commit.commitAuthorName,
+          commit_author_avatar: commit.commitAuthorAvatar,
+          commit_date: commit.commitDate,
+          summary: summary ?? "Summary generation failed",
         };
-      } else {
-        console.warn(`  ⚠️  ${commit.commitHash.slice(0, 7)}: Failed, using fallback`);
-        return {
-          projectId: projectId,
-          commitHash: commit.commitHash,
-          commitMessage: commit.commitMessage,
-          commitAuthorName: commit.commitAuthorName,
-          commitAuthorAvatar: commit.commitAuthorAvatar,
-          commitDate: commit.commitDate,
-          summary: "Failed to generate summary after retries",
-        };
-      }
-    });
+      }),
+    );
 
-    const results = await Promise.all(batchPromises);
-    commitsToCreate.push(...results);
+    toInsert.push(...results.filter((r): r is NonNullable<typeof r> => r !== null));
 
-    // Delay before next batch (except for last one)
-    if (i + PARALLEL_COMMITS < unprocessedCommits.length) {
-      const remaining = Math.ceil((unprocessedCommits.length - i - PARALLEL_COMMITS) / PARALLEL_COMMITS);
-      console.log(`  ⏳ Next batch in 4s... (${remaining} batches remaining)`);
-      await delay(DELAY_BETWEEN_BATCHES);
-    }
+    if (i + BATCH < unprocessed.length) await delay(BATCH_DELAY);
   }
 
-  if (commitsToCreate.length === 0) {
-    console.log("No commits to create");
-    return { count: 0 };
-  }
+  if (toInsert.length === 0) return { count: 0 };
 
-  console.log(`\n💾 Saving ${commitsToCreate.length} commits to database...`);
-  const commits = await db.commit.createMany({
-    data: commitsToCreate,
-  });
+  const { error } = await supabase.from("commits").insert(toInsert);
+  if (error) throw error;
 
-  console.log(`✅ Created ${commits.count} commit records`);
-  return commits;
-};
-
-async function summariseCommit(githubUrl: string, commitHash: string) {
-  try {
-    // Fetch the diff
-    const { data } = await axios.get(`${githubUrl}/commit/${commitHash}.diff`, {
-      headers: {
-        Accept: "application/vnd.github.v3.diff",
-      },
-      timeout: 10000, // 10 second timeout
-    });
-
-    if (!data || typeof data !== "string") {
-      console.warn(`No diff data for commit ${commitHash}`);
-      return "No changes detected in diff";
-    }
-
-    console.log(`  Diff size: ${data.length} characters`);
-
-    // Call AI to summarize (this is where rate limiting happens)
-    const summary = await aiSummariseCommit(data);
-
-    if (!summary || summary.trim().length === 0) {
-      console.warn(`Empty summary returned for commit ${commitHash}`);
-      return "Summary generation returned empty result";
-    }
-
-    return summary.trim();
-  } catch (error) {
-    console.error(`Error in summariseCommit for ${commitHash}:`, error);
-    if (axios.isAxiosError(error)) {
-      throw new Error(`Failed to fetch diff: ${error.message}`);
-    }
-    throw error;
-  }
-}
-
-async function fetchProjectGithubUrl(projectId: string) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    select: {
-      githubUrl: true,
-    },
-  });
-
-  if (!project?.githubUrl) {
-    throw new Error("Project has no github url");
-  }
-
-  return { project, githubUrl: project.githubUrl };
-}
-
-async function filterUnprocessedCommits(
-  projectId: string,
-  commitHashes: Response[],
-) {
-  const processedCommits = await db.commit.findMany({
-    where: { projectId },
-  });
-
-  const unprocessedCommits = commitHashes.filter(
-    (commit) =>
-      !processedCommits.some(
-        (processedCommit) => processedCommit.commitHash === commit.commitHash,
-      ),
-  );
-
-  return unprocessedCommits;
+  console.log(`✅ Inserted ${toInsert.length} commits`);
+  return { count: toInsert.length };
 }

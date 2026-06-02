@@ -1,107 +1,220 @@
 "use client";
 
-import useProject from "@/hooks/use-project";
 import { api } from "@/trpc/react";
-import React from "react";
-import MeetingCard from "../dashboard/meeting-card";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useProject } from "@/hooks/use-project";
+import { useRefetch } from "@/hooks/use-refetch";
+import { useDropzone } from "react-dropzone";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import useRefetch from "@/hooks/use-refetch";
-import { Loader2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import {
+  Mic,
+  Upload,
+  Trash2,
+  CheckCircle,
+  Clock,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
-const MeetingsPage = () => {
-  const { projectId } = useProject();
-  const { data: meetings, isLoading } = api.project.getMeetings.useQuery(
-    { projectId },
-    { refetchInterval: 4000 },
-  );
-  const deleteMeeting = api.project.deleteMeeting.useMutation();
+export default function MeetingsPage() {
+  const { project } = useProject();
   const refetch = useRefetch();
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const { data: meetings, isLoading } = api.project.getMeetings.useQuery(
+    { projectId: project?.id ?? "" },
+    { enabled: !!project?.id, refetchInterval: 5000 },
+  );
+
+  const uploadMeeting = api.project.uploadMeeting.useMutation();
+  const deleteMeeting = api.project.deleteMeeting.useMutation({
+    onSuccess: () => { refetch().catch(console.error); toast.success("Meeting deleted"); },
+  });
+
+  const onDrop = useCallback(
+    async (accepted: File[]) => {
+      const file = accepted[0];
+      if (!file || !project) return;
+
+      setUploading(true);
+      setProgress(0);
+      try {
+        setProgress(10);
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/upload-meeting", { method: "POST", body: form });
+        if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
+        const { url } = await res.json() as { url: string };
+        setProgress(80);
+        const meeting = await uploadMeeting.mutateAsync({
+          projectId: project.id,
+          meetingUrl: url,
+          name: file.name,
+        });
+
+        await fetch("/api/process-meeting", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            meetingUrl: url,
+            projectId: project.id,
+            meetingId: meeting.id,
+          }),
+        });
+
+        await refetch();
+        toast.success("Meeting uploaded and processing started");
+      } catch (err: any) {
+        toast.error(err.message ?? "Upload failed");
+      } finally {
+        setUploading(false);
+        setProgress(0);
+      }
+    },
+    [project, uploadMeeting, refetch],
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "audio/*": [".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".webm", ".flac"],
+    },
+    maxFiles: 1,
+    disabled: uploading || !project,
+  });
+
+  if (!project) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <p className="text-zinc-500">Select a project to manage meetings.</p>
+      </div>
+    );
+  }
+
+  const statusIcon = (status: string) => {
+    if (status === "COMPLETED") return <CheckCircle className="h-4 w-4 text-emerald-400" />;
+    if (status === "FAILED") return <XCircle className="h-4 w-4 text-red-400" />;
+    return <Clock className="h-4 w-4 text-amber-400 animate-pulse" />;
+  };
 
   return (
-    <>
-      <MeetingCard />
-      <div className="h-6"></div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-white">Meetings</h1>
+        <p className="text-sm text-zinc-500 mt-1">Upload audio recordings to get AI-generated chapter summaries.</p>
+      </div>
 
-      <h1 className="text-xl font-semibold">Meetings</h1>
+      {/* Upload zone */}
+      <div
+        {...getRootProps()}
+        className={`glass rounded-2xl border-2 border-dashed p-10 text-center transition-colors cursor-pointer ${
+          isDragActive ? "border-sky-500 bg-sky-500/5" : "border-white/10 hover:border-sky-500/40"
+        } ${uploading || !project ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        <input {...getInputProps()} />
+        <Upload className="mx-auto h-10 w-10 text-zinc-600 mb-3" />
+        {uploading ? (
+          <>
+            <p className="text-white font-medium">Uploading… {progress}%</p>
+            <div className="mt-3 mx-auto h-1.5 w-48 rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-sky-500 transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </>
+        ) : isDragActive ? (
+          <p className="text-sky-400 font-medium">Drop the audio file here</p>
+        ) : (
+          <>
+            <p className="text-white font-medium">Drop audio file or click to upload</p>
+            <p className="text-xs text-zinc-600 mt-1">MP3, MP4, M4A, WAV, OGG, WEBM, FLAC</p>
+          </>
+        )}
+      </div>
 
-      {meetings && meetings.length === 0 && <div>No meetings found</div>}
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          <p className="mt-4 text-sm text-gray-500">Loading meetings...</p>
+      {/* Meetings list */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-white/5" />
+          ))}
         </div>
-      )}
-
-      <ul className="divide-y divide-gray-200">
-        {meetings?.map((meeting) => (
-          <li
-            key={meeting.id}
-            className="flex flex-col items-start justify-between gap-4 py-5 sm:flex-row sm:items-center"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="min-w-0">
+      ) : meetings?.length === 0 ? (
+        <div className="glass rounded-xl p-8 text-center">
+          <Mic className="mx-auto h-8 w-8 text-zinc-600 mb-2" />
+          <p className="text-zinc-500">No meetings yet. Upload an audio recording above.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {meetings?.map((meeting) => (
+            <div key={meeting.id} className="glass rounded-xl overflow-hidden">
+              <div className="flex items-center gap-4 p-4">
+                {statusIcon(meeting.status)}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-white truncate">{meeting.name}</p>
+                  <p className="text-xs text-zinc-500">
+                    {formatDistanceToNow(new Date(meeting.created_at), { addSuffix: true })}
+                  </p>
+                </div>
                 <div className="flex items-center gap-2">
-                  <Link
-                    href={`/meetings/${meeting.id}`}
-                    className="text-sm font-semibold"
-                  >
-                    {meeting.name}
-                  </Link>
-
-                  {meeting.status === "PROCESSING" && (
-                    <Badge className="bg-black text-white">Processing...</Badge>
+                  {meeting.status === "COMPLETED" && (meeting.issues?.length ?? 0) > 0 && (
+                    <button
+                      onClick={() => setExpandedId(expandedId === meeting.id ? null : meeting.id)}
+                      className="text-zinc-500 hover:text-white transition-colors"
+                    >
+                      {expandedId === meeting.id ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </button>
                   )}
+                  <button
+                    onClick={() => deleteMeeting.mutate({ meetingId: meeting.id })}
+                    className="text-zinc-600 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-x-2 text-xs text-gray-500">
-                <p className="whitespace-nowrap">
-                  {meeting.createdAt.toLocaleDateString()}
-                </p>
 
-                <p className="truncate">{meeting.issues.length} issues</p>
-              </div>
+              <AnimatePresence>
+                {expandedId === meeting.id && meeting.issues && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t border-white/8 overflow-hidden"
+                  >
+                    <div className="p-4 space-y-3">
+                      {(meeting.issues as Array<{id:string;start_time:string;end_time:string;gist:string;headline:string;summary:string}>).map((issue) => (
+                        <div key={issue.id} className="glass rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] text-zinc-600 font-mono">
+                              {issue.start_time} – {issue.end_time}
+                            </span>
+                            <span className="glass rounded-full px-2 py-0.5 text-[10px] text-sky-400">
+                              {issue.gist}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-white">{issue.headline}</p>
+                          <p className="text-xs text-zinc-500 mt-1">{issue.summary}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <div className="flex w-full flex-none flex-wrap items-center gap-x-4 gap-y-2 sm:w-auto">
-              <Link
-                href={`/meetings/${meeting.id}`}
-                className="flex-1 sm:flex-none"
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  View Meeting
-                </Button>
-              </Link>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() =>
-                  deleteMeeting.mutate(
-                    { meetingId: meeting.id },
-                    {
-                      onSuccess: () => {
-                        toast.success("Meeting deleted successfully");
-                        refetch();
-                      },
-                    },
-                  )
-                }
-                disabled={deleteMeeting.isPending}
-                className="w-full flex-1 sm:w-auto sm:flex-none"
-              >
-                Delete Meeting
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </>
+          ))}
+        </div>
+      )}
+    </div>
   );
-};
-
-export default MeetingsPage;
+}

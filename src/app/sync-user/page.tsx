@@ -1,42 +1,26 @@
-import { db } from "@/server/db";
-import { auth, clerkClient } from "@clerk/nextjs/server";
-import { notFound } from "next/navigation";
-import { RedirectToDashboard } from "@/components/ui/redirect-to-dashboard";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { createAdminSupabase } from "@/lib/supabase";
 
-const SyncUser = async () => {
+export default async function SyncUserPage() {
   const { userId } = await auth();
-  if (!userId) {
-    throw new Error("User not found");
-  }
+  if (!userId) redirect("/sign-in");
 
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
+  const user = await currentUser();
+  if (!user) redirect("/sign-in");
 
-  const emailAddress = user.emailAddresses[0]?.emailAddress;
-  if (!emailAddress) {
-    return notFound();
-  }
+  const supabase = createAdminSupabase();
 
-  await db.user.upsert({
-    where: {
+  await supabase.from("users").upsert(
+    {
       id: userId,
+      image_url: user.imageUrl,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      email_address: user.emailAddresses[0]?.emailAddress ?? "",
     },
-    update: {
-      emailAddress: emailAddress,
-      imageUrl: user.imageUrl,
-      firstName: user.firstName ?? "",
-      lastName: user.lastName ?? "",
-    },
-    create: {
-      id: userId,
-      emailAddress: emailAddress,
-      imageUrl: user.imageUrl,
-      firstName: user.firstName ?? "",
-      lastName: user.lastName ?? "",
-    },
-  });
+    { onConflict: "id" },
+  );
 
-  return <RedirectToDashboard />;
-};
-
-export default SyncUser;
+  redirect("/dashboard");
+}

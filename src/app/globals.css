@@ -1,0 +1,263 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+
+  /* Sky-blue palette */
+  --sky-50: #f0f9ff;
+  --sky-100: #e0f2fe;
+  --sky-200: #bae6fd;
+  --sky-300: #7dd3fc;
+  --sky-400: #38bdf8;
+  --sky-500: #0ea5e9;
+  --sky-600: #0284c7;
+  --sky-700: #0369a1;
+
+  /* Cyan accent */
+  --cyan-400: #22d3ee;
+  --cyan-500: #06b6d4;
+
+  /* Font families (set by next/font in layout) */
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, monospace;
+}
+
+/* ─── Smooth scrollbar ─── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* ─── Glassmorphism helpers ─── */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.glass-nav {
+  background: rgba(0, 0, 0, 0.60);
+  backdrop-filter: blur(32px) saturate(1.4);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Gradient text ─── */
+.gradient-text {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Glow effects ─── */
+.glow-sky   { box-shadow: 0 0 30px rgba(14, 165, 233, 0.15); }
+.glow-cyan  { box-shadow: 0 0 30px rgba(6, 182, 212, 0.15); }
+
+/* ─── Animated conic-gradient border (ported from Origin) ─── */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.glowing-border {
+  position: relative;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.glowing-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--border-angle) at 50% 50%,
+    rgba(14, 165, 233, 0.5) 0deg,
+    rgba(14, 165, 233, 0) 60deg,
+    rgba(14, 165, 233, 0) 300deg,
+    rgba(14, 165, 233, 0.5) 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px;
+  border-radius: inherit;
+  animation: borderSpin 3s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes borderSpin {
+  from { --border-angle: 0deg; }
+  to   { --border-angle: 360deg; }
+}
+
+/* ─── Card gradient overlay ─── */
+.card-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(8,8,8,0.8) 0%, transparent 50%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* ─── Button hover glow (Origin-style radial gradient) ─── */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: radial-gradient(85% 120% at 50% 120%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.btn-glow:hover::after {
+  opacity: 0.7;
+}
+
+/* ─── Sleek error messages ─── */
+.error-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  font-size: 12px;
+  line-height: 1.5;
+  backdrop-filter: blur(8px);
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.error-message::before {
+  content: "⚠";
+  font-size: 10px;
+}
+
+/* ─── Keyframe animations ─── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.15); }
+  50%      { box-shadow: 0 0 40px rgba(14, 165, 233, 0.25); }
+}
+
+/* ─── Sonner toast overrides ─── */
+[data-sonner-toaster] [data-sonner-toast] {
+  --toast-bg: rgba(255, 255, 255, 0.06);
+  background: var(--toast-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-sans);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] {
+  --toast-bg: rgba(14, 165, 233, 0.08);
+  border-color: rgba(14, 165, 233, 0.15);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] {
+  --toast-bg: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+/* ─── Typography helpers ─── */
+.font-serif  { font-family: var(--font-serif); }
+.font-sans   { font-family: var(--font-sans); }
+.font-mono   { font-family: var(--font-mono); }
+
+/* ─── Hero sky overlay ─── */
+.hero-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(8, 8, 8, 0.25) 0%,
+    rgba(8, 8, 8, 0.15) 25%,
+    rgba(8, 8, 8, 0.10) 45%,
+    rgba(8, 8, 8, 0.20) 65%,
+    rgba(8, 8, 8, 0.50) 85%,
+    rgba(8, 8, 8, 0.95) 100%
+  );
+}
+
+/* ─── Text shadow for readability on image backgrounds ─── */
+.text-hero {
+  text-shadow:
+    0 1px 15px rgba(255, 255, 255, 0.1),
+    0 2px 40px rgba(0, 0, 0, 0.2);
+}
+
+.text-hero-sm {
+  text-shadow:
+    0 1px 10px rgba(255, 255, 255, 0.08),
+    0 1px 25px rgba(0, 0, 0, 0.15);
+}

@@ -1,107 +1,116 @@
-import z from "zod";
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { pollCommits } from "@/lib/github";
 import { indexGithubRepo } from "@/lib/github-loader";
-import { TRPCError } from "@trpc/server";
 
-// Credit costs
-const CREDITS_PER_PROJECT = 50;
-const CREDITS_PER_QUESTION = 1;
+const CREDITS_PROJECT = 50;
+const CREDITS_QUESTION = 1;
 
 export const projectRouter = createTRPCRouter({
+  // ── Credits ──────────────────────────────────────────────────────
   getMyCredits: protectedProcedure.query(async ({ ctx }) => {
-    const user = await ctx.db.user.findUnique({
-      where: { id: ctx.user.userId! },
-      select: { credits: true },
-    });
-    return user?.credits ?? 0;
+    const { data } = await ctx.supabase
+      .from("users")
+      .select("credits")
+      .eq("id", ctx.userId)
+      .single();
+    return data?.credits ?? 0;
   }),
 
+  // ── Projects ─────────────────────────────────────────────────────
   createProject: protectedProcedure
     .input(
       z.object({
         name: z.string().min(1).max(100),
-        githubUrl: z.string(),
+        githubUrl: z.string().url(),
         githubToken: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check if user has enough credits
-      const user = await ctx.db.user.findUnique({
-        where: { id: ctx.user.userId! },
-        select: { credits: true },
-      });
+      const { data: user } = await ctx.supabase
+        .from("users")
+        .select("credits")
+        .eq("id", ctx.userId)
+        .single();
 
-      if (!user || user.credits < CREDITS_PER_PROJECT) {
+      if (!user || user.credits < CREDITS_PROJECT) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: `Insufficient credits. You need ${CREDITS_PER_PROJECT} credits to create a project. You have ${user?.credits ?? 0} credits.`,
+          message: `You need ${CREDITS_PROJECT} credits to create a project (you have ${user?.credits ?? 0}).`,
         });
       }
 
-      const project = await ctx.db.project.create({
-        data: {
-          githubUrl: input.githubUrl,
-          name: input.name,
-          userToProjects: {
-            create: {
-              userId: ctx.user.userId!,
-            },
-          },
-        },
+      // Deduct credits first (atomic via DB function)
+      await ctx.supabase.rpc("decrement_credits", {
+        p_user_id: ctx.userId,
+        p_amount: CREDITS_PROJECT,
       });
 
-      // Deduct credits after successful creation
-      await ctx.db.user.update({
-        where: { id: ctx.user.userId! },
-        data: { credits: { decrement: CREDITS_PER_PROJECT } },
-      });
+      // Create project
+      const { data: project, error } = await ctx.supabase
+        .from("projects")
+        .insert({ name: input.name, github_url: input.githubUrl })
+        .select()
+        .single();
 
-      await indexGithubRepo(project.id, input.githubUrl, input.githubToken);
-      await pollCommits(project.id);
-      return project;
-    }),
-  getProjects: protectedProcedure.query(async ({ ctx }) => {
-    return await ctx.db.project.findMany({
-      where: {
-        userToProjects: {
-          some: {
-            userId: ctx.user.userId!,
-          },
-        },
-        deletedAt: null,
-      },
-    });
-  }),
-  getCommits: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const project = await ctx.db.project.findFirst({
-        where: {
-          id: input.projectId,
-          deletedAt: null,
-          userToProjects: {
-            some: {
-              userId: ctx.user.userId!,
-            },
-          },
-        },
-      });
-
-      if (!project) {
-        return [];
+      if (error || !project) {
+        // Refund credits if project creation failed
+        await ctx.supabase.rpc("increment_credits", {
+          p_user_id: ctx.userId,
+          p_amount: CREDITS_PROJECT,
+        });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error?.message });
       }
 
-      pollCommits(input.projectId).then().catch(console.error);
+      // Add creator as member
+      await ctx.supabase
+        .from("user_to_projects")
+        .insert({ user_id: ctx.userId, project_id: project.id });
 
-      return await ctx.db.commit.findMany({
-        where: { projectId: input.projectId },
-      });
+      // Index and poll in parallel (fire-and-forget — long running)
+      void Promise.all([
+        indexGithubRepo(project.id, input.githubUrl, input.githubToken),
+        pollCommits(project.id),
+      ]).catch(console.error);
+
+      return project;
     }),
+
+  getProjects: protectedProcedure.query(async ({ ctx }) => {
+    const { data: membership } = await ctx.supabase
+      .from("user_to_projects")
+      .select("project_id")
+      .eq("user_id", ctx.userId);
+
+    if (!membership?.length) return [];
+
+    const ids = membership.map((m) => m.project_id);
+    const { data } = await ctx.supabase
+      .from("projects")
+      .select("*")
+      .in("id", ids)
+      .is("deleted_at", null);
+
+    return data ?? [];
+  }),
+
+  getCommits: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      // Poll for new commits async (don't await)
+      void pollCommits(input.projectId).catch(console.error);
+
+      const { data } = await ctx.supabase
+        .from("commits")
+        .select("*")
+        .eq("project_id", input.projectId)
+        .order("commit_date", { ascending: false });
+
+      return data ?? [];
+    }),
+
+  // ── Q&A ──────────────────────────────────────────────────────────
   saveAnswer: protectedProcedure
     .input(
       z.object({
@@ -112,53 +121,35 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.question.create({
-        data: {
-          answer: input.answer,
-          filesReferences: input.filesReferences,
-          projectId: input.projectId,
+      const { data, error } = await ctx.supabase
+        .from("questions")
+        .insert({
+          project_id: input.projectId,
+          user_id: ctx.userId,
           question: input.question,
-          userId: ctx.user.userId!,
-        },
-      });
+          answer: input.answer,
+          files_references: input.filesReferences,
+        })
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return data;
     }),
+
   getQuestions: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-      }),
-    )
+    .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return await ctx.db.question.findMany({
-        where: {
-          projectId: input.projectId,
-        },
-        include: {
-          user: true,
-        },
-        orderBy: [
-          {
-            createdAt: "desc",
-          },
-        ],
-      });
+      const { data } = await ctx.supabase
+        .from("questions")
+        .select("*, users(image_url, first_name, last_name)")
+        .eq("project_id", input.projectId)
+        .order("created_at", { ascending: false });
+
+      return data ?? [];
     }),
-  archiveProject: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      return await ctx.db.project.update({
-        where: {
-          id: input.projectId,
-        },
-        data: {
-          deletedAt: new Date(),
-        },
-      });
-    }),
+
+  // ── Meetings ─────────────────────────────────────────────────────
   uploadMeeting: protectedProcedure
     .input(
       z.object({
@@ -168,44 +159,79 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const meeting = await ctx.db.meeting.create({
-        data: {
-          meetingUrl: input.meetingUrl,
-          projectId: input.projectId,
+      const { data, error } = await ctx.supabase
+        .from("meetings")
+        .insert({
+          project_id: input.projectId,
+          meeting_url: input.meetingUrl,
           name: input.name,
           status: "PROCESSING",
-        },
-      });
-      return meeting;
+        })
+        .select()
+        .single();
+
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      return data;
     }),
 
   getMeetings: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return await ctx.db.meeting.findMany({
-        where: { projectId: input.projectId },
-        include: { issues: true },
-      });
+      const { data } = await ctx.supabase
+        .from("meetings")
+        .select("*, issues(*)")
+        .eq("project_id", input.projectId)
+        .order("created_at", { ascending: false });
+
+      return data ?? [];
     }),
-  deleteMeeting: protectedProcedure
-    .input(z.object({ meetingId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      return await ctx.db.meeting.delete({ where: { id: input.meetingId } });
-    }),
+
   getMeetingById: protectedProcedure
     .input(z.object({ meetingId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return await ctx.db.meeting.findUnique({
-        where: { id: input.meetingId },
-        include: { issues: true },
-      });
+      const { data } = await ctx.supabase
+        .from("meetings")
+        .select("*, issues(*)")
+        .eq("id", input.meetingId)
+        .single();
+
+      return data;
     }),
+
+  deleteMeeting: protectedProcedure
+    .input(z.object({ meetingId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.supabase.from("meetings").delete().eq("id", input.meetingId);
+    }),
+
+  // ── Team ─────────────────────────────────────────────────────────
   getTeamMembers: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return await ctx.db.userToProject.findMany({
-        where: { projectId: input.projectId },
-        include: { user: true },
-      });
+      const { data } = await ctx.supabase
+        .from("user_to_projects")
+        .select("*, users(*)")
+        .eq("project_id", input.projectId);
+
+      return data ?? [];
+    }),
+
+  deleteQuestion: protectedProcedure
+    .input(z.object({ questionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.supabase
+        .from("questions")
+        .delete()
+        .eq("id", input.questionId)
+        .eq("user_id", ctx.userId);
+    }),
+
+  archiveProject: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.supabase
+        .from("projects")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", input.projectId);
     }),
 });

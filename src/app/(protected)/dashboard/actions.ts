@@ -2,179 +2,111 @@
 
 import { streamText } from "ai";
 import { createStreamableValue } from "@ai-sdk/rsc";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { groq, GROQ_MODEL } from "@/lib/groq";
 import { generateEmbedding } from "@/lib/gemini";
-import { db } from "@/server/db";
+import { createAdminSupabase } from "@/lib/supabase";
 import { auth } from "@clerk/nextjs/server";
-
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
 
 const CREDITS_PER_QUESTION = 1;
 
-async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  initialDelay = 2000,
-): Promise<T> {
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      lastError = error;
-      const is429 =
-        error?.message?.includes("429") ||
-        error?.message?.includes("quota") ||
-        error?.message?.includes("rate limit");
-
-      if (is429 && attempt < maxRetries - 1) {
-        const delay = initialDelay * Math.pow(2, attempt);
-        console.log(
-          `Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      } else {
-        break;
-      }
-    }
-  }
-
-  throw lastError || new Error("Max retries exceeded");
-}
-
 export async function askQuestion(question: string, projectId: string) {
-  const stream = createStreamableValue();
+  const stream = createStreamableValue<string>();
 
-  try {
-    // Check user credits
-    const { userId } = await auth();
-    if (!userId) {
-      stream.update("You must be logged in to ask questions.");
-      stream.done();
-      return { output: stream.value, filesReferences: [] };
-    }
-
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { credits: true },
-    });
-
-    if (!user || user.credits < CREDITS_PER_QUESTION) {
-      stream.update(
-        `Insufficient credits. You need ${CREDITS_PER_QUESTION} credit to ask a question. Please purchase more credits from the Billing page.`,
-      );
-      stream.done();
-      return { output: stream.value, filesReferences: [] };
-    }
-
-    // Deduct credit before processing
-    await db.user.update({
-      where: { id: userId },
-      data: { credits: { decrement: CREDITS_PER_QUESTION } },
-    });
-
-    const queryVector = await retryWithBackoff(
-      () => generateEmbedding(question),
-      3,
-      2000,
-    );
-
-    const vectorQuery = `[${queryVector.join(",")}]`;
-
-    const result = (await db.$queryRaw`
-      SELECT "fileName", "sourceCode", "summary",
-      1 - ("summaryEmbedding" <=> ${vectorQuery}::vector) AS similarity
-      FROM "SourceCodeEmbedding"
-      WHERE 1 - ("summaryEmbedding" <=> ${vectorQuery}::vector) > .5
-      AND "projectId" = ${projectId}
-      ORDER BY "similarity" DESC
-      LIMIT 10
-    `) as { fileName: string; sourceCode: string; summary: string }[];
-
-    let context = "";
-    for (const doc of result) {
-      context += `source: ${doc.fileName}\ncode content: ${doc.sourceCode}\n summary of file: ${doc.summary}\n\n`;
-    }
-
-    (async () => {
-      try {
-        const { textStream } = await streamText({
-          model: google("gemini-2.5-flash-lite"),
-          prompt: `
-You are an AI code assistant specializing in codebase analysis. You help developers understand their code by answering questions based on the provided codebase context.
-
-PERSONALITY & TONE:
-- Professional yet approachable, like a senior developer mentor
-- Clear, concise, and technically accurate
-- Patient and thorough in explanations
-- Encouraging and constructive
-
-CORE CAPABILITIES:
-- Analyze code structure, patterns, and relationships
-- Explain functionality with step-by-step breakdowns when needed
-- Identify potential issues, bugs, or improvements
-- Provide context-aware answers based on the specific codebase
-- Reference specific files and code sections when explaining
-
-RESPONSE GUIDELINES:
-- Always ground answers in the provided context
-- When explaining code, break down complex logic into understandable steps
-- Use code examples from the context to illustrate points
-- If the context doesn't contain relevant information, clearly state this
-- Provide actionable insights when appropriate
-- Format code references clearly with file names
-
-START CONTEXT BLOCK
-${context}
-END OF CONTEXT BLOCK
-
-START QUESTION
-${question}
-END OF QUESTION
-
-Based on the provided codebase context, answer the question thoroughly. If the context contains relevant code, reference specific files and explain the implementation details. If the context is insufficient, acknowledge this and explain what information would be needed.
-          `,
-        });
-
-        for await (const delta of textStream) {
-          stream.update(delta);
-        }
-
-        stream.done();
-      } catch (error: any) {
-        console.error("Error in streamText:", error);
-
-        if (
-          error?.message?.includes("429") ||
-          error?.message?.includes("quota")
-        ) {
-          stream.update(
-            "I apologize, but I've hit the API rate limit. Please wait a moment and try again.",
-          );
-        } else {
-          stream.update(
-            "I apologize, but I encountered an error processing your question. Please try again.",
-          );
-        }
-
-        stream.done();
-      }
-    })();
-
-    return { output: stream.value, filesReferences: result };
-  } catch (error: any) {
-    console.error("Error in askQuestion:", error);
-
-    stream.update(
-      error?.message?.includes("429") || error?.message?.includes("quota")
-        ? "Rate limit exceeded. Please wait a few moments before asking another question."
-        : "An error occurred while processing your question. Please try again.",
-    );
+  const { userId } = await auth();
+  if (!userId) {
+    stream.update("You must be logged in to ask questions.");
     stream.done();
-
     return { output: stream.value, filesReferences: [] };
   }
+
+  const supabase = createAdminSupabase();
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("credits")
+    .eq("id", userId)
+    .single();
+
+  if (!user || user.credits < CREDITS_PER_QUESTION) {
+    stream.update(
+      `Insufficient credits. You need ${CREDITS_PER_QUESTION} credit to ask a question. Please purchase more from the Billing page.`,
+    );
+    stream.done();
+    return { output: stream.value, filesReferences: [] };
+  }
+
+  // Deduct credit atomically before processing
+  await supabase.rpc("decrement_credits", {
+    p_user_id: userId,
+    p_amount: CREDITS_PER_QUESTION,
+  });
+
+  let queryVector: number[];
+  try {
+    queryVector = await generateEmbedding(question);
+  } catch {
+    stream.update("Failed to generate question embedding. Please try again.");
+    stream.done();
+    return { output: stream.value, filesReferences: [] };
+  }
+
+  const { data: results } = await supabase.rpc("match_source_code", {
+    query_embedding: `[${queryVector.join(",")}]` as unknown as number[],
+    match_threshold: 0.5,
+    match_count: 10,
+    p_project_id: projectId,
+  });
+
+  const filesReferences = (results ?? []) as Array<{
+    id: string;
+    file_name: string;
+    source_code: string;
+    summary: string;
+    similarity: number;
+  }>;
+
+  const context = filesReferences
+    .map(
+      (f) =>
+        `Source: ${f.file_name}\nSummary: ${f.summary}\nCode:\n${f.source_code.slice(0, 2000)}`,
+    )
+    .join("\n\n---\n\n");
+
+  (async () => {
+    try {
+      const result = streamText({
+        model: groq(GROQ_MODEL),
+        prompt: `You are an AI code assistant helping developers understand their codebase.
+Answer questions based on the provided source code context.
+
+GUIDELINES:
+- Ground answers in the provided context
+- Reference specific files when explaining
+- Break down complex logic step by step
+- If context is insufficient, say so clearly
+- Be concise but thorough
+
+CONTEXT:
+${context}
+
+QUESTION: ${question}
+
+Provide a thorough, helpful answer:`,
+      });
+
+      for await (const delta of result.textStream) {
+        stream.update(delta);
+      }
+      stream.done();
+    } catch (err: any) {
+      if (err?.message?.includes("429") || err?.message?.includes("quota")) {
+        stream.update("Rate limit hit. Please wait a moment and try again.");
+      } else {
+        stream.update("An error occurred while processing your question. Please try again.");
+      }
+      stream.done();
+    }
+  })();
+
+  return { output: stream.value, filesReferences };
 }
