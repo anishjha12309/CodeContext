@@ -1,3 +1,5 @@
+// Walks a GitHub repo tree, summarises each file via Cerebras, generates embeddings
+// via Gemini, and stores everything in Supabase for semantic search.
 import { Octokit } from "octokit";
 import { batchSummariseCode } from "./cerebras";
 import { generateEmbedding } from "./gemini";
@@ -51,6 +53,7 @@ function shouldSkip(path: string): boolean {
   return SKIP_PATTERNS.some((p) => p.test(path));
 }
 
+// strips null bytes and control chars that would corrupt the DB insert
 function sanitize(str: string): string {
   return str.replace(/\0/g, "").replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 }
@@ -64,6 +67,7 @@ function parseGithubUrl(url: string): { owner: string; repo: string } {
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// backs off 5s then 10s on 429s before giving up
 async function withRetry<T>(fn: () => Promise<T>, label = ""): Promise<T | null> {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {

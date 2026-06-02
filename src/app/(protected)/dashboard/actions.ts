@@ -1,4 +1,6 @@
 "use server";
+// Server action for the Q&A feature. Embeds the question, runs a pgvector similarity
+// search against indexed source code, then streams the answer back via Groq.
 
 import { streamText } from "ai";
 import { createStreamableValue } from "@ai-sdk/rsc";

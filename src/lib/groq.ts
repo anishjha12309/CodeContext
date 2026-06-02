@@ -1,3 +1,4 @@
+// Groq handles two jobs: summarising git diffs (70b model) and transcribing meeting audio (Whisper).
 import Groq from "groq-sdk";
 import { createGroq } from "@ai-sdk/groq";
 import { generateText } from "ai";
@@ -79,6 +80,7 @@ export async function transcribeAudio(audioUrl: string): Promise<{
   return { text: transcript, chapters };
 }
 
+// falls back to a single full-meeting chapter if the model returns malformed JSON
 async function generateChapters(
   transcript: string,
   segments: Array<{ start: number; end: number; text: string }>,

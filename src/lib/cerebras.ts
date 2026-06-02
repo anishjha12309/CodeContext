@@ -1,3 +1,4 @@
+// Code summarisation using Cerebras (llama-4-scout). Fast and cheap on the free tier.
 import { createCerebras } from "@ai-sdk/cerebras";
 import { generateText } from "ai";
 

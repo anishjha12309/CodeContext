@@ -1,3 +1,5 @@
+// Handles meeting audio uploads server-side using the admin Supabase client.
+// Must be a server route (not a client upload) to bypass storage RLS.
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";

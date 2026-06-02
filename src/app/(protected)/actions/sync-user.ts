@@ -1,4 +1,6 @@
 "use server";
+// Upserts the Clerk user into Supabase on each protected page load.
+// Called from the layout useEffect — no webhooks required.
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { createAdminSupabase } from "@/lib/supabase";

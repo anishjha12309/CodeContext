@@ -1,3 +1,4 @@
+// Vector embeddings for semantic search. gemini-embedding-001 outputs 3072 dimensions.
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);

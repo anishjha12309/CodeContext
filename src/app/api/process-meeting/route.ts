@@ -1,3 +1,5 @@
+// Long-running route (5 min timeout) that transcribes audio via Groq Whisper,
+// splits it into chapters, and persists them as issues in Supabase.
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";

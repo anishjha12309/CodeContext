@@ -1,3 +1,5 @@
+// tRPC router for all project operations — CRUD, Q&A, commits, meetings, and billing.
+// All procedures run as admin Supabase but scope reads/writes to ctx.userId.
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
@@ -5,7 +7,6 @@ import { pollCommits } from "@/lib/github";
 import { indexGithubRepo } from "@/lib/github-loader";
 
 const CREDITS_PROJECT = 50;
-const CREDITS_QUESTION = 1;
 
 export const projectRouter = createTRPCRouter({
   // ── Credits ──────────────────────────────────────────────────────

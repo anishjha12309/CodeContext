@@ -1,3 +1,4 @@
+// Polls GitHub for new commits, fetches their diffs, and stores AI summaries via Groq.
 import { Octokit } from "octokit";
 import { createAdminSupabase } from "./supabase";
 import { summariseCommit } from "./groq";
@@ -64,6 +65,7 @@ async function withRetry<T>(
   return null;
 }
 
+// grabs the raw .diff for a commit; 15s timeout to avoid hanging on large repos
 async function fetchDiff(githubUrl: string, commitHash: string): Promise<string | null> {
   try {
     const response = await fetch(`${githubUrl}/commit/${commitHash}.diff`, {

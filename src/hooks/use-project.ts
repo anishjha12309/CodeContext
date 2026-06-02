@@ -1,4 +1,6 @@
 "use client";
+// Tracks the active project in localStorage so selection survives page refreshes.
+// The project object is derived from the loaded list — no extra fetch needed.
 
 import { api } from "@/trpc/react";
 import { useLocalStorage } from "usehooks-ts";

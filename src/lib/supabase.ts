@@ -1,3 +1,5 @@
+// Two clients: anon (browser, subject to RLS) and service role (server, bypasses RLS).
+// Never use the admin client on the frontend — it has full DB access.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 function getUrl() {

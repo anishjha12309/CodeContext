@@ -1,3 +1,5 @@
+// Route guard via Clerk. Public routes are whitelisted; everything else requires
+// an active session and redirects to /sign-in if absent.
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 

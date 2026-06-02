@@ -1,3 +1,5 @@
+// tRPC server setup. Context attaches the Clerk userId and an admin Supabase client
+// to every request. protectedProcedure throws UNAUTHORIZED if there's no session.
 import { initTRPC, TRPCError } from "@trpc/server";
 import { auth } from "@clerk/nextjs/server";
 import superjson from "superjson";
