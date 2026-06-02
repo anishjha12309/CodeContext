@@ -12,8 +12,8 @@ export const env = createEnv({
     CEREBRAS_API_KEY: z.string().min(1),
     GEMINI_API_KEY: z.string().min(1),
     GITHUB_TOKEN: z.string().min(1).optional(),
-    RAZORPAY_KEY_ID: z.string().min(1).optional(),
-    RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
+    RAZORPAY_KEY_ID: z.string().min(1),
+    RAZORPAY_KEY_SECRET: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),

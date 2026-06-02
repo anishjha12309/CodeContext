@@ -2,7 +2,8 @@ import "./globals.css";
 import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { TRPCReactProvider } from "@/trpc/react";
-import { Toaster } from "sonner";
+import { ToasterWithTheme } from "@/components/toaster-with-theme";
+import { Providers } from "@/components/providers";
 import { Playfair_Display, Inter, Roboto_Mono } from "next/font/google";
 
 const playfair = Playfair_Display({
@@ -32,15 +33,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider appearance={{ variables: { colorPrimary: "#0ea5e9" } }}>
-      <html lang="en" className="dark scroll-smooth">
+      <html lang="en" suppressHydrationWarning className="dark scroll-smooth">
         <body
           className={`${inter.variable} ${playfair.variable} ${robotoMono.variable} min-h-screen bg-[#080808] font-sans antialiased`}
           style={{ fontFamily: "var(--font-sans)" }}
         >
-          <TRPCReactProvider>
-            {children}
-            <Toaster richColors theme="dark" position="bottom-right" />
-          </TRPCReactProvider>
+          <Providers>
+            <TRPCReactProvider>
+              {children}
+              <ToasterWithTheme />
+            </TRPCReactProvider>
+          </Providers>
         </body>
       </html>
     </ClerkProvider>

@@ -33,7 +33,10 @@ export default function MeetingsPage() {
 
   const uploadMeeting = api.project.uploadMeeting.useMutation();
   const deleteMeeting = api.project.deleteMeeting.useMutation({
-    onSuccess: () => { refetch().catch(console.error); toast.success("Meeting deleted"); },
+    onSuccess: () => {
+      refetch().catch(console.error);
+      toast.success("Meeting deleted");
+    },
   });
 
   const onDrop = useCallback(
@@ -49,7 +52,7 @@ export default function MeetingsPage() {
         form.append("file", file);
         const res = await fetch("/api/upload-meeting", { method: "POST", body: form });
         if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
-        const { url } = await res.json() as { url: string };
+        const { url } = (await res.json()) as { url: string };
         setProgress(80);
         const meeting = await uploadMeeting.mutateAsync({
           projectId: project.id,
@@ -97,31 +100,37 @@ export default function MeetingsPage() {
   }
 
   const statusIcon = (status: string) => {
-    if (status === "COMPLETED") return <CheckCircle className="h-4 w-4 text-emerald-400" />;
+    if (status === "COMPLETED") return <CheckCircle className="h-4 w-4 text-emerald-500" />;
     if (status === "FAILED") return <XCircle className="h-4 w-4 text-red-400" />;
-    return <Clock className="h-4 w-4 text-amber-400 animate-pulse" />;
+    return <Clock className="h-4 w-4 animate-pulse text-amber-400" />;
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Meetings</h1>
-        <p className="text-sm text-zinc-500 mt-1">Upload audio recordings to get AI-generated chapter summaries.</p>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Meetings</h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-500">
+          Upload audio recordings to get AI-generated chapter summaries.
+        </p>
       </div>
 
       {/* Upload zone */}
       <div
         {...getRootProps()}
-        className={`glass rounded-2xl border-2 border-dashed p-10 text-center transition-colors cursor-pointer ${
-          isDragActive ? "border-sky-500 bg-sky-500/5" : "border-white/10 hover:border-sky-500/40"
-        } ${uploading || !project ? "opacity-50 cursor-not-allowed" : ""}`}
+        className={`glass-app-strong cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all ${
+          isDragActive
+            ? "border-sky-500 bg-sky-500/5"
+            : "border-black/10 dark:border-white/10 hover:border-sky-500/50"
+        } ${uploading || !project ? "cursor-not-allowed opacity-50" : ""}`}
       >
         <input {...getInputProps()} />
-        <Upload className="mx-auto h-10 w-10 text-zinc-600 mb-3" />
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/10">
+          <Upload className="h-6 w-6 text-sky-500" />
+        </div>
         {uploading ? (
           <>
-            <p className="text-white font-medium">Uploading… {progress}%</p>
-            <div className="mt-3 mx-auto h-1.5 w-48 rounded-full bg-white/10">
+            <p className="font-semibold text-zinc-900 dark:text-white">Uploading… {progress}%</p>
+            <div className="mx-auto mt-3 h-1.5 w-48 rounded-full bg-black/10 dark:bg-white/10">
               <div
                 className="h-full rounded-full bg-sky-500 transition-all"
                 style={{ width: `${progress}%` }}
@@ -129,11 +138,13 @@ export default function MeetingsPage() {
             </div>
           </>
         ) : isDragActive ? (
-          <p className="text-sky-400 font-medium">Drop the audio file here</p>
+          <p className="font-semibold text-sky-500">Drop the audio file here</p>
         ) : (
           <>
-            <p className="text-white font-medium">Drop audio file or click to upload</p>
-            <p className="text-xs text-zinc-600 mt-1">MP3, MP4, M4A, WAV, OGG, WEBM, FLAC</p>
+            <p className="font-semibold text-zinc-900 dark:text-white">
+              Drop audio file or click to upload
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">MP3, MP4, M4A, WAV, OGG, WEBM, FLAC</p>
           </>
         )}
       </div>
@@ -142,31 +153,33 @@ export default function MeetingsPage() {
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl bg-white/5" />
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-black/5 dark:bg-white/5" />
           ))}
         </div>
       ) : meetings?.length === 0 ? (
-        <div className="glass rounded-xl p-8 text-center">
-          <Mic className="mx-auto h-8 w-8 text-zinc-600 mb-2" />
-          <p className="text-zinc-500">No meetings yet. Upload an audio recording above.</p>
+        <div className="glass-app rounded-xl p-8 text-center">
+          <Mic className="mx-auto mb-2 h-8 w-8 text-zinc-400 dark:text-zinc-600" />
+          <p className="text-sm text-zinc-500">No meetings yet. Upload an audio recording above.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {meetings?.map((meeting) => (
-            <div key={meeting.id} className="glass rounded-xl overflow-hidden">
+            <div key={meeting.id} className="glass-app overflow-hidden rounded-xl">
               <div className="flex items-center gap-4 p-4">
                 {statusIcon(meeting.status)}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate">{meeting.name}</p>
-                  <p className="text-xs text-zinc-500">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-zinc-900 dark:text-white">{meeting.name}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-600">
                     {formatDistanceToNow(new Date(meeting.created_at), { addSuffix: true })}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {meeting.status === "COMPLETED" && (meeting.issues?.length ?? 0) > 0 && (
                     <button
-                      onClick={() => setExpandedId(expandedId === meeting.id ? null : meeting.id)}
-                      className="text-zinc-500 hover:text-white transition-colors"
+                      onClick={() =>
+                        setExpandedId(expandedId === meeting.id ? null : meeting.id)
+                      }
+                      className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white"
                     >
                       {expandedId === meeting.id ? (
                         <ChevronUp className="h-4 w-4" />
@@ -177,7 +190,7 @@ export default function MeetingsPage() {
                   )}
                   <button
                     onClick={() => deleteMeeting.mutate({ meetingId: meeting.id })}
-                    className="text-zinc-600 hover:text-red-400 transition-colors"
+                    className="rounded-lg p-1.5 text-zinc-400 dark:text-zinc-600 transition-colors hover:bg-red-500/10 hover:text-red-500"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -190,21 +203,32 @@ export default function MeetingsPage() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-white/8 overflow-hidden"
+                    className="overflow-hidden border-t border-black/8 dark:border-white/8"
                   >
-                    <div className="p-4 space-y-3">
-                      {(meeting.issues as Array<{id:string;start_time:string;end_time:string;gist:string;headline:string;summary:string}>).map((issue) => (
-                        <div key={issue.id} className="glass rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] text-zinc-600 font-mono">
+                    <div className="space-y-3 p-4">
+                      {(
+                        meeting.issues as Array<{
+                          id: string;
+                          start_time: string;
+                          end_time: string;
+                          gist: string;
+                          headline: string;
+                          summary: string;
+                        }>
+                      ).map((issue) => (
+                        <div key={issue.id} className="glass-app rounded-xl p-3">
+                          <div className="mb-1.5 flex items-center gap-2">
+                            <span className="font-mono text-[10px] text-zinc-500">
                               {issue.start_time} – {issue.end_time}
                             </span>
-                            <span className="glass rounded-full px-2 py-0.5 text-[10px] text-sky-400">
+                            <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-600 dark:text-sky-400">
                               {issue.gist}
                             </span>
                           </div>
-                          <p className="text-sm font-medium text-white">{issue.headline}</p>
-                          <p className="text-xs text-zinc-500 mt-1">{issue.summary}</p>
+                          <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                            {issue.headline}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">{issue.summary}</p>
                         </div>
                       ))}
                     </div>

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FolderGit2, Loader2 } from "lucide-react";
+import { FolderGit2, Loader2, GitBranch, KeyRound, Tag } from "lucide-react";
 import { useRefetch } from "@/hooks/use-refetch";
 
 const schema = z.object({
@@ -14,7 +14,7 @@ const schema = z.object({
   githubUrl: z
     .string()
     .url("Enter a valid URL")
-    .includes("github.com", { message: "Must be a GitHub URL" }),
+    .refine((url) => url.includes("github.com"), { message: "Must be a GitHub URL" }),
   githubToken: z.string().optional(),
 });
 
@@ -52,59 +52,68 @@ export default function CreatePage() {
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
-      <div className="glass-strong w-full max-w-md rounded-2xl p-8">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-500">
+      <div className="glass-app-strong w-full max-w-md rounded-2xl p-8">
+        {/* Header */}
+        <div className="mb-7 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-500">
             <FolderGit2 className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-white text-lg">New Project</h1>
-            <p className="text-xs text-zinc-500">Costs 50 credits · you have {credits ?? 0}</p>
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-white">New Project</h1>
+            <p className="text-xs text-zinc-500">
+              Costs 50 credits · you have {credits ?? 0}
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Project name */}
           <div className="space-y-1.5">
-            <label className="text-sm text-zinc-400">Project name</label>
+            <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <Tag className="h-3.5 w-3.5" />
+              Project name
+            </label>
             <input
               {...register("name")}
               placeholder="My awesome project"
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-sky-500 transition-colors"
+              className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-4 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none transition-colors focus:border-sky-500"
             />
-            {errors.name && (
-              <p className="error-message">{errors.name.message}</p>
-            )}
+            {errors.name && <p className="error-message">{errors.name.message}</p>}
           </div>
 
+          {/* GitHub URL */}
           <div className="space-y-1.5">
-            <label className="text-sm text-zinc-400">GitHub URL</label>
+            <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <GitBranch className="h-3.5 w-3.5" />
+              GitHub URL
+            </label>
             <input
               {...register("githubUrl")}
               placeholder="https://github.com/owner/repo"
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-sky-500 transition-colors"
+              className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-4 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none transition-colors focus:border-sky-500"
             />
-            {errors.githubUrl && (
-              <p className="error-message">{errors.githubUrl.message}</p>
-            )}
+            {errors.githubUrl && <p className="error-message">{errors.githubUrl.message}</p>}
           </div>
 
+          {/* GitHub token */}
           <div className="space-y-1.5">
-            <label className="text-sm text-zinc-400">
-              GitHub token{" "}
-              <span className="text-zinc-600">(optional, for private repos)</span>
+            <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <KeyRound className="h-3.5 w-3.5" />
+              GitHub token
+              <span className="ml-1 font-normal text-zinc-400 dark:text-zinc-600">(optional, for private repos)</span>
             </label>
             <input
               {...register("githubToken")}
               type="password"
               placeholder="ghp_…"
-              className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-sky-500 transition-colors"
+              className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-4 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none transition-colors focus:border-sky-500"
             />
           </div>
 
           <button
             type="submit"
             disabled={createProject.isPending}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 py-3 text-sm font-semibold text-white transition-all hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 py-3 text-sm font-semibold text-white transition-all hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {createProject.isPending ? (
               <>

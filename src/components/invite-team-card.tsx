@@ -19,12 +19,12 @@ export function InviteTeamCard({ projectId }: { projectId: string }) {
   return (
     <button
       onClick={copyLink}
-      className="glass flex items-center gap-2 rounded-xl px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
+      className="glass-app flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-white"
     >
       <Users className="h-4 w-4" />
       Invite team
       {copied ? (
-        <Check className="h-3.5 w-3.5 text-emerald-400" />
+        <Check className="h-3.5 w-3.5 text-emerald-500" />
       ) : (
         <Copy className="h-3.5 w-3.5" />
       )}

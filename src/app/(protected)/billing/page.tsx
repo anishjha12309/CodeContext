@@ -3,7 +3,7 @@
 import { api } from "@/trpc/react";
 import { useRefetch } from "@/hooks/use-refetch";
 import { toast } from "sonner";
-import { CreditCard, Zap } from "lucide-react";
+import { CreditCard, Zap, CheckCircle } from "lucide-react";
 import { useState } from "react";
 
 declare global {
@@ -13,10 +13,16 @@ declare global {
 }
 
 const PACKAGES = [
-  { credits: 50, amount: 50, label: "Starter" },
-  { credits: 100, amount: 100, label: "Builder", popular: true },
-  { credits: 500, amount: 500, label: "Pro" },
-  { credits: 1000, amount: 1000, label: "Scale" },
+  { credits: 50, amount: 50, label: "Starter", perks: ["50 credits", "~1 project"] },
+  {
+    credits: 100,
+    amount: 100,
+    label: "Builder",
+    popular: true,
+    perks: ["100 credits", "~2 projects"],
+  },
+  { credits: 500, amount: 500, label: "Pro", perks: ["500 credits", "~10 projects"] },
+  { credits: 1000, amount: 1000, label: "Scale", perks: ["1000 credits", "~20 projects"] },
 ];
 
 export default function BillingPage() {
@@ -32,7 +38,10 @@ export default function BillingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: pkg.amount }),
       });
-      const { orderId, amount } = await res.json() as { orderId: string; amount: number };
+      const { orderId, amount } = (await res.json()) as {
+        orderId: string;
+        amount: number;
+      };
 
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -64,7 +73,7 @@ export default function BillingPage() {
             toast.error("Payment verification failed.");
           }
         },
-        theme: { color: "#7c3aed" },
+        theme: { color: "#0ea5e9" },
       });
 
       rzp.open();
@@ -76,27 +85,37 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white">Billing</h1>
-        <p className="text-zinc-500 text-sm mt-1">Purchase credits to create projects and ask questions.</p>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Billing</h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-500">
+          Purchase credits to create projects and ask questions.
+        </p>
       </div>
 
       {/* Current balance */}
-      <div className="glass-strong inline-flex items-center gap-3 rounded-2xl px-6 py-4">
-        <Zap className="h-5 w-5 text-sky-400" />
+      <div className="glass-app-strong inline-flex items-center gap-4 rounded-2xl px-6 py-5">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/15">
+          <Zap className="h-6 w-6 text-sky-500" />
+        </div>
         <div>
-          <p className="text-xs text-zinc-500">Current balance</p>
-          <p className="text-2xl font-bold text-white">{credits ?? 0} <span className="text-sm font-normal text-zinc-500">credits</span></p>
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Current balance</p>
+          <p className="mt-0.5 text-3xl font-bold text-zinc-900 dark:text-white">
+            {credits ?? 0}
+            <span className="ml-1.5 text-sm font-normal text-zinc-500">credits</span>
+          </p>
         </div>
       </div>
 
+      {/* Packages */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {PACKAGES.map((pkg) => (
           <div
             key={pkg.amount}
-            className={`relative glass rounded-2xl p-5 transition-all ${
-              pkg.popular ? "border-sky-500/40 glow-sky" : ""
+            className={`glass-app relative rounded-2xl p-5 transition-all ${
+              pkg.popular
+                ? "border-sky-500/40 ring-1 ring-sky-500/20"
+                : ""
             }`}
           >
             {pkg.popular && (
@@ -105,19 +124,25 @@ export default function BillingPage() {
               </div>
             )}
 
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{pkg.label}</p>
-            <p className="mt-2 text-3xl font-bold text-white">
-              ₹{pkg.amount}
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              {pkg.label}
             </p>
-            <p className="mt-1 text-sm text-zinc-400">
-              {pkg.credits} credits
-            </p>
-            <p className="text-xs text-zinc-600 mt-0.5">1 INR = 1 credit</p>
+            <p className="mt-3 text-3xl font-bold text-zinc-900 dark:text-white">₹{pkg.amount}</p>
+            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{pkg.credits} credits</p>
+
+            <ul className="mt-4 space-y-1.5">
+              {pkg.perks.map((p) => (
+                <li key={p} className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-500">
+                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  {p}
+                </li>
+              ))}
+            </ul>
 
             <button
               onClick={() => handlePurchase(pkg)}
               disabled={loading === pkg.amount}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600/80 py-2.5 text-sm font-medium text-white transition-all hover:bg-sky-600 disabled:opacity-50"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 py-2.5 text-sm font-semibold text-white transition-all hover:bg-sky-500 disabled:opacity-50"
             >
               <CreditCard className="h-4 w-4" />
               {loading === pkg.amount ? "Processing…" : "Buy now"}
@@ -126,9 +151,10 @@ export default function BillingPage() {
         ))}
       </div>
 
-      <div className="glass rounded-xl p-4 text-xs text-zinc-600 space-y-1">
+      {/* Info */}
+      <div className="glass-app rounded-xl p-4 space-y-1.5 text-xs text-zinc-500 dark:text-zinc-600">
         <p>• 50 credits to create a project</p>
-        <p>• 1 credit per Q&A question</p>
+        <p>• 1 credit per Q&amp;A question</p>
         <p>• New accounts start with 150 free credits</p>
         <p>• Credits never expire</p>
       </div>

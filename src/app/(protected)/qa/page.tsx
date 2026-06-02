@@ -5,7 +5,7 @@ import { useProject } from "@/hooks/use-project";
 import { useRefetch } from "@/hooks/use-refetch";
 import { askQuestion } from "@/app/(protected)/dashboard/actions";
 import { readStreamableValue } from "@ai-sdk/rsc";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { Bot, Send, Loader2, FileCode, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
@@ -14,7 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { motion } from "motion/react";
+import { useTheme } from "next-themes";
 
 type FileRef = {
   file_name: string;
@@ -26,13 +28,26 @@ type FileRef = {
 export default function QAPage() {
   const { project } = useProject();
   const refetch = useRefetch();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [refs, setRefs] = useState<FileRef[]>([]);
   const [expandedRef, setExpandedRef] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [selectedQ, setSelectedQ] = useState<{ id: string; question: string; answer: string; created_at: string; files_references: unknown; users?: { image_url?: string; first_name?: string } } | null>(null);
+  const [selectedQ, setSelectedQ] = useState<{
+    id: string;
+    question: string;
+    answer: string;
+    created_at: string;
+    files_references: unknown;
+    users?: { image_url?: string; first_name?: string };
+  } | null>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  const codeStyle = mounted && resolvedTheme === "light" ? oneLight : oneDark;
 
   const { data: questions } = api.project.getQuestions.useQuery(
     { projectId: project?.id ?? "" },
@@ -95,7 +110,7 @@ export default function QAPage() {
   if (!project) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <p className="text-zinc-500">Select a project to use Q&A.</p>
+        <p className="text-zinc-500">Select a project to use Q&amp;A.</p>
       </div>
     );
   }
@@ -103,12 +118,14 @@ export default function QAPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Codebase Q&A</h1>
-        <p className="text-sm text-zinc-500 mt-1">Ask questions about {project.name} in plain English.</p>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Codebase Q&amp;A</h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-500">
+          Ask questions about {project.name} in plain English.
+        </p>
       </div>
 
       {/* Input */}
-      <div className="glass-strong rounded-2xl p-5 space-y-4">
+      <div className="glass-app-strong rounded-2xl p-5 space-y-4">
         <textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
@@ -117,10 +134,10 @@ export default function QAPage() {
           }}
           placeholder="How does authentication work? What does the billing module do?…"
           rows={3}
-          className="w-full resize-none rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-sky-500 transition-colors"
+          className="w-full resize-none rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none focus:border-sky-500 transition-colors"
         />
         <div className="flex items-center justify-between">
-          <span className="text-xs text-zinc-600">⌘ + Enter to send · 1 credit per question</span>
+          <span className="text-xs text-zinc-500">⌘ + Enter to send · 1 credit per question</span>
           <button
             onClick={handleAsk}
             disabled={loading || !question.trim()}
@@ -137,23 +154,23 @@ export default function QAPage() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl p-5 space-y-4"
+          className="glass-app rounded-2xl p-5 space-y-4"
         >
           <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-sky-400" />
-            <span className="font-semibold text-white">Answer</span>
-            {loading && <Loader2 className="h-3 w-3 animate-spin text-zinc-500 ml-auto" />}
+            <Bot className="h-5 w-5 text-sky-500" />
+            <span className="font-semibold text-zinc-900 dark:text-white">Answer</span>
+            {loading && <Loader2 className="ml-auto h-3 w-3 animate-spin text-zinc-500" />}
           </div>
 
           {answer && (
-            <div className="prose prose-invert prose-sm max-w-none text-zinc-300">
+            <div className="prose prose-sm max-w-none text-zinc-700 dark:text-zinc-300 dark:prose-invert">
               <ReactMarkdown
                 components={{
                   code({ className, children, ...props }: any) {
                     const lang = /language-(\w+)/.exec(className ?? "")?.[1];
                     return lang ? (
                       <SyntaxHighlighter
-                        style={oneDark as any}
+                        style={codeStyle as any}
                         language={lang}
                         PreTag="div"
                         className="rounded-xl text-xs"
@@ -161,7 +178,7 @@ export default function QAPage() {
                         {String(children).replace(/\n$/, "")}
                       </SyntaxHighlighter>
                     ) : (
-                      <code className="rounded bg-white/10 px-1 py-0.5 text-xs" {...props}>
+                      <code className="rounded bg-black/8 dark:bg-white/10 px-1 py-0.5 text-xs" {...props}>
                         {children}
                       </code>
                     );
@@ -174,7 +191,7 @@ export default function QAPage() {
           )}
 
           {!loading && answer && (
-            <div className="flex items-center justify-between pt-2 border-t border-white/8">
+            <div className="flex items-center justify-between border-t border-black/8 dark:border-white/8 pt-3">
               <div className="flex flex-wrap gap-2">
                 {refs.map((ref) => (
                   <button
@@ -182,7 +199,7 @@ export default function QAPage() {
                     onClick={() =>
                       setExpandedRef(expandedRef === ref.file_name ? null : ref.file_name)
                     }
-                    className="glass flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-zinc-400 hover:text-white transition-colors"
+                    className="glass-app flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-white"
                   >
                     <FileCode className="h-3 w-3" />
                     {ref.file_name.split("/").pop()}
@@ -197,7 +214,7 @@ export default function QAPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="text-xs text-zinc-500 hover:text-sky-400 transition-colors"
+                className="text-xs text-zinc-500 transition-colors hover:text-sky-600 dark:hover:text-sky-400"
               >
                 {saving ? "Saving…" : "Save answer"}
               </button>
@@ -205,13 +222,13 @@ export default function QAPage() {
           )}
 
           {expandedRef && (
-            <div className="glass rounded-xl p-3 text-xs">
-              <p className="text-zinc-400 font-mono mb-2">{expandedRef}</p>
+            <div className="glass-app rounded-xl p-3 text-xs">
+              <p className="mb-2 font-mono text-zinc-500">{expandedRef}</p>
               <SyntaxHighlighter
-                style={oneDark as any}
+                style={codeStyle as any}
                 language="typescript"
                 PreTag="div"
-                className="rounded-lg text-xs max-h-64 overflow-auto"
+                className="max-h-64 overflow-auto rounded-lg text-xs"
               >
                 {refs.find((r) => r.file_name === expandedRef)?.source_code?.slice(0, 3000) ?? ""}
               </SyntaxHighlighter>
@@ -223,35 +240,40 @@ export default function QAPage() {
       {/* Saved questions */}
       {questions && questions.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Saved Q&A</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-600">
+            Saved Q&amp;A
+          </h2>
           {questions.map((q) => (
             <div
               key={q.id}
               onClick={() => setSelectedQ(q as any)}
-              className="glass rounded-xl p-4 space-y-3 cursor-pointer hover:bg-white/4 transition-colors"
+              className="glass-app cursor-pointer rounded-xl p-4 space-y-3 transition-all hover:shadow-md"
             >
               <div className="flex items-start gap-3">
                 <Avatar className="h-7 w-7 shrink-0">
                   <AvatarImage src={(q as any).users?.image_url} />
-                  <AvatarFallback className="text-[10px] bg-sky-900 text-sky-200">
+                  <AvatarFallback className="bg-sky-900 text-[10px] text-sky-200">
                     {((q as any).users?.first_name?.[0] ?? "?").toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white">{q.question}</p>
-                  <p className="text-xs text-zinc-600 mt-0.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-zinc-900 dark:text-white">{q.question}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-600">
                     {formatDistanceToNow(new Date(q.created_at), { addSuffix: true })}
                   </p>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); deleteQuestion.mutate({ questionId: q.id }); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteQuestion.mutate({ questionId: q.id });
+                  }}
                   disabled={deleteQuestion.isPending}
-                  className="shrink-0 rounded-lg p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="shrink-0 rounded-lg p-1.5 text-zinc-400 dark:text-zinc-600 transition-colors hover:bg-red-500/10 hover:text-red-500"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <p className="text-xs text-zinc-400 line-clamp-2 pl-10">{q.answer}</p>
+              <p className="line-clamp-2 pl-10 text-xs text-zinc-600 dark:text-zinc-400">{q.answer}</p>
             </div>
           ))}
         </div>
@@ -259,28 +281,36 @@ export default function QAPage() {
 
       {/* Q&A detail dialog */}
       <Dialog open={!!selectedQ} onOpenChange={(open) => { if (!open) setSelectedQ(null); }}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-h-[80vh] max-w-3xl overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-white text-base font-semibold pr-6">
+            <DialogTitle className="pr-6 text-base font-semibold text-zinc-900 dark:text-white">
               {selectedQ?.question}
             </DialogTitle>
-            <p className="text-xs text-zinc-600">
-              {selectedQ && formatDistanceToNow(new Date(selectedQ.created_at), { addSuffix: true })}
+            <p className="text-xs text-zinc-500">
+              {selectedQ &&
+                formatDistanceToNow(new Date(selectedQ.created_at), { addSuffix: true })}
             </p>
           </DialogHeader>
 
-          <div className="overflow-y-auto flex-1 pr-1">
-            <div className="prose prose-invert prose-sm max-w-none text-zinc-300">
+          <div className="flex-1 overflow-y-auto pr-1">
+            <div className="prose prose-sm max-w-none text-zinc-700 dark:text-zinc-300 dark:prose-invert">
               <ReactMarkdown
                 components={{
                   code({ className, children, ...props }: any) {
                     const lang = /language-(\w+)/.exec(className ?? "")?.[1];
                     return lang ? (
-                      <SyntaxHighlighter style={oneDark as any} language={lang} PreTag="div" className="rounded-xl text-xs">
+                      <SyntaxHighlighter
+                        style={codeStyle as any}
+                        language={lang}
+                        PreTag="div"
+                        className="rounded-xl text-xs"
+                      >
                         {String(children).replace(/\n$/, "")}
                       </SyntaxHighlighter>
                     ) : (
-                      <code className="rounded bg-white/10 px-1 py-0.5 text-xs" {...props}>{children}</code>
+                      <code className="rounded bg-black/8 dark:bg-white/10 px-1 py-0.5 text-xs" {...props}>
+                        {children}
+                      </code>
                     );
                   },
                 }}
