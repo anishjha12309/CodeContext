@@ -6,6 +6,7 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { usePathname } from "next/navigation";
 import { useProject } from "@/hooks/use-project";
+import { useRefetch } from "@/hooks/use-refetch";
 import { api } from "@/trpc/react";
 import {
   Bot,
@@ -16,11 +17,14 @@ import {
   ChevronDown,
   Menu,
   X,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { syncUser } from "./actions/sync-user";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,14 +35,42 @@ const navItems = [
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { projects, project, projectId, setProjectId } = useProject();
   const { data: credits } = api.project.getMyCredits.useQuery();
   const [projectsOpen, setProjectsOpen] = useState(false);
+  const refetch = useRefetch();
+
+  const archiveProject = api.project.archiveProject.useMutation({
+    onSuccess: async () => {
+      await refetch();
+      toast.success("Project deleted");
+    },
+    onError: () => toast.error("Failed to delete project"),
+  });
+
+  function handleDelete(id: string, name: string) {
+    toast("Delete project?", {
+      description: `"${name}" and all its data will be removed.`,
+      action: {
+        label: "Delete",
+        onClick: () => {
+          archiveProject.mutate({ projectId: id });
+          if (id === projectId) {
+            setProjectId("");
+            router.push("/dashboard");
+          }
+        },
+      },
+      cancel: { label: "Cancel", onClick: () => {} },
+      duration: 8000,
+    });
+  }
 
   return (
     <>
       {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-black/8 px-5 dark:border-white/6">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-black/8 px-5 dark:border-white/8">
         <div className="flex items-center">
           <Logo className="mt-px h-5 w-auto text-zinc-900 dark:text-white" />
           <span className="gradient-text text-lg font-semibold">
@@ -48,7 +80,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         {onClose && (
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-white"
+            className="rounded-lg p-1 text-zinc-500 transition-colors hover:text-zinc-900 dark:text-white/40 dark:hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -68,14 +100,14 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
                 active
-                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-300"
-                  : "text-zinc-600 hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
+                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
+                  : "text-zinc-600 hover:bg-black/5 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
               )}
             >
               <Icon
                 className={cn(
                   "h-4 w-4 shrink-0",
-                  active ? "text-sky-500 dark:text-sky-400" : "text-current",
+                  active && "text-sky-500 dark:text-sky-400",
                 )}
               />
               {item.label}
@@ -83,11 +115,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           );
         })}
 
-        <div className="my-2 border-t border-black/6 dark:border-white/6" />
+        <div className="my-2 border-t border-black/6 dark:border-white/8" />
 
         {/* Project switcher */}
         <p
-          className="mb-1.5 px-3 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase dark:text-zinc-600"
+          className="mb-1.5 px-3 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase dark:text-white/25"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           Projects
@@ -95,7 +127,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
         <button
           onClick={() => setProjectsOpen((o) => !o)}
-          className="glass-app flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-700 transition-colors hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
+          className="glass-app flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-700 transition-colors hover:text-zinc-900 dark:text-white/60 dark:hover:text-white"
         >
           <span className="truncate">{project?.name ?? "Select project"}</span>
           <ChevronDown
@@ -116,36 +148,47 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             >
               <div className="mt-1 space-y-0.5 pb-1">
                 {projects.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setProjectId(p.id);
-                      setProjectsOpen(false);
-                      onClose?.();
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
-                      p.id === projectId
-                        ? "bg-sky-500/8 text-sky-600 dark:text-sky-300"
-                        : "text-zinc-600 hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
-                    )}
-                  >
-                    <div
+                  <div key={p.id} className="group flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setProjectId(p.id);
+                        setProjectsOpen(false);
+                        onClose?.();
+                      }}
                       className={cn(
-                        "h-1.5 w-1.5 shrink-0 rounded-full",
+                        "flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
                         p.id === projectId
-                          ? "bg-sky-400"
-                          : "bg-zinc-300 dark:bg-zinc-600",
+                          ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
+                          : "text-zinc-600 hover:bg-black/5 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
                       )}
-                    />
-                    <span className="truncate">{p.name}</span>
-                  </button>
+                    >
+                      <div
+                        className={cn(
+                          "h-1.5 w-1.5 shrink-0 rounded-full",
+                          p.id === projectId
+                            ? "bg-sky-400"
+                            : "bg-zinc-300 dark:bg-white/20",
+                        )}
+                      />
+                      <span className="truncate">{p.name}</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(p.id, p.name);
+                      }}
+                      disabled={archiveProject.isPending}
+                      className="shrink-0 rounded-md p-1 text-zinc-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 dark:text-white/25"
+                      aria-label="Delete project"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 ))}
-
                 <Link
                   href="/create"
                   onClick={onClose}
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-500 transition-colors hover:bg-black/5 hover:text-sky-600 dark:hover:bg-white/5 dark:hover:text-sky-400"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-500 transition-colors hover:bg-black/5 hover:text-sky-600 dark:text-white/40 dark:hover:bg-white/5 dark:hover:text-sky-400"
                 >
                   <Plus className="h-4 w-4" />
                   New project
@@ -157,22 +200,24 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* Bottom: credits + user + theme toggle */}
-      <div className="shrink-0 space-y-2 border-t border-black/8 p-3 dark:border-white/6">
+      <div className="shrink-0 space-y-2 border-t border-black/8 p-3 dark:border-white/8">
         <div className="glass-app flex items-center justify-between rounded-xl px-3 py-2.5">
           <span
-            className="text-xs text-zinc-500"
+            className="text-xs text-zinc-500 dark:text-white/40"
             style={{ fontFamily: "var(--font-mono)" }}
           >
             Credits
           </span>
-          <span className="text-sm font-bold text-sky-600 dark:text-sky-300">
+          <span className="text-sm font-bold text-sky-600 dark:text-sky-400">
             {credits ?? "—"}
           </span>
         </div>
         <div className="flex items-center justify-between px-1 py-0.5">
           <div className="flex items-center gap-2.5">
             <UserButton appearance={{ elements: { avatarBox: "h-8 w-8" } }} />
-            <span className="text-xs text-zinc-500">Account</span>
+            <span className="text-xs text-zinc-500 dark:text-white/40">
+              Account
+            </span>
           </div>
           <ThemeToggle />
         </div>
@@ -193,12 +238,12 @@ export default function ProtectedLayout({
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa] dark:bg-[#121212]">
-      {/* Ambient orbs for depth */}
+    <div className="flex min-h-screen bg-[#fafafa] dark:bg-black">
+      {/* Ambient sky orbs — give glass something to refract */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-sky-400/10 blur-3xl dark:bg-sky-500/5" />
-        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-cyan-400/8 blur-3xl dark:bg-sky-600/4" />
-        <div className="absolute top-1/2 right-1/4 h-72 w-72 rounded-full bg-sky-300/6 blur-3xl dark:bg-sky-400/3" />
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-sky-400/10 blur-3xl dark:bg-sky-500/8" />
+        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-cyan-400/8 blur-3xl dark:bg-sky-500/6" />
+        <div className="absolute top-1/2 right-1/4 h-72 w-72 rounded-full bg-sky-300/6 blur-3xl dark:bg-sky-400/4" />
       </div>
 
       {/* Desktop sidebar */}

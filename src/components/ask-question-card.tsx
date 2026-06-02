@@ -63,26 +63,21 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
   return (
     <div className="glass-app rounded-2xl p-5 flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <Bot className="h-5 w-5 text-sky-500" />
+        <Bot className="h-5 w-5 text-sky-400" />
         <h2 className="font-semibold text-zinc-900 dark:text-white">Ask about this codebase</h2>
       </div>
 
       <textarea
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAsk();
-        }}
+        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAsk(); }}
         placeholder="How does the auth flow work?…"
         rows={3}
-        className="w-full resize-none rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none transition-colors focus:border-sky-500"
+        className="w-full resize-none rounded-xl border border-black/10 dark:border-white/8 bg-black/5 dark:bg-white/4 px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none transition-colors focus:border-sky-500 dark:focus:border-sky-500"
       />
 
       <div className="flex items-center justify-between">
-        <Link
-          href="/qa"
-          className="text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300"
-        >
+        <Link href="/qa" className="text-xs text-zinc-500 dark:text-white/40 transition-colors hover:text-sky-600 dark:hover:text-sky-400">
           View all Q&amp;A →
         </Link>
         <button
@@ -97,27 +92,17 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
 
       {answer && (
         <div className="border-t border-black/8 dark:border-white/8 pt-4 space-y-3">
-          <div className="prose prose-sm max-w-none max-h-64 overflow-y-auto text-zinc-700 dark:text-zinc-300 dark:prose-invert">
+          <div className="prose prose-sm max-w-none max-h-64 overflow-y-auto text-zinc-700 dark:text-white/80 dark:prose-invert">
             <ReactMarkdown
               components={{
                 code({ className, children, ...props }: any) {
                   const lang = /language-(\w+)/.exec(className ?? "")?.[1];
                   return lang ? (
-                    <SyntaxHighlighter
-                      style={codeStyle as any}
-                      language={lang}
-                      PreTag="div"
-                      className="rounded-lg text-xs"
-                    >
+                    <SyntaxHighlighter style={codeStyle as any} language={lang} PreTag="div" className="rounded-lg text-xs">
                       {String(children).replace(/\n$/, "")}
                     </SyntaxHighlighter>
                   ) : (
-                    <code
-                      className="rounded bg-black/8 dark:bg-white/10 px-1 py-0.5 text-xs"
-                      {...props}
-                    >
-                      {children}
-                    </code>
+                    <code className="rounded bg-white/8 px-1 py-0.5 text-xs" {...props}>{children}</code>
                   );
                 },
               }}
@@ -126,7 +111,7 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
             </ReactMarkdown>
           </div>
           {saveAnswer.isPending && (
-            <p className="flex items-center gap-1 text-[10px] text-zinc-500">
+            <p className="flex items-center gap-1 text-[10px] text-white/30">
               <Loader2 className="h-3 w-3 animate-spin" /> Saving…
             </p>
           )}

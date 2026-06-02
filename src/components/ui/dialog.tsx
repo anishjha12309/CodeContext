@@ -61,7 +61,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border border-black/8 dark:border-white/8 bg-white/95 dark:bg-[#0a0a0a]/95 p-6 shadow-2xl backdrop-blur-xl duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border border-black/8 dark:border-white/8 bg-white/95 dark:bg-black p-6 shadow-2xl dark:shadow-[0_24px_80px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
           className
         )}
         {...props}
@@ -70,7 +70,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 opacity-70 transition-opacity hover:opacity-100 hover:text-zinc-900 dark:hover:text-white focus:outline-none disabled:pointer-events-none"
+            className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 dark:text-white/30 opacity-70 transition-opacity hover:opacity-100 hover:text-zinc-900 dark:hover:text-white focus:outline-none disabled:pointer-events-none"
           >
             <XIcon className="h-4 w-4" />
             <span className="sr-only">Close</span>
