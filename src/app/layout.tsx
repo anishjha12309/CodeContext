@@ -34,6 +34,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider appearance={{ variables: { colorPrimary: "#0ea5e9" } }}>
       <html lang="en" suppressHydrationWarning className="dark scroll-smooth">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <body
           className={`${inter.variable} ${playfair.variable} ${robotoMono.variable} min-h-screen bg-[#080808] font-sans antialiased`}
           style={{ fontFamily: "var(--font-sans)" }}

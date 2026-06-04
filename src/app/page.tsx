@@ -2,7 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { HoverBorderGradient } from "@/components/ui/animated-border-button";
+import dynamic from "next/dynamic";
+const HoverBorderGradient = dynamic(() =>
+  import("@/components/ui/animated-border-button").then((m) => m.HoverBorderGradient),
+);
 import {
   ArrowRight,
   Bot,
@@ -21,6 +24,7 @@ export default async function LandingPage() {
 
   return (
     <SmoothScroll>
+      <link rel="preload" href="/sky-hero.webp" as="image" type="image/webp" />
       <div className="relative min-h-screen overflow-x-hidden bg-[#080808] text-white">
         {/* ═══════════════════════════════════════════════════════
           GLASSMORPHISM NAVBAR (Compact, floaty, centered pill)
@@ -80,7 +84,7 @@ export default async function LandingPage() {
           <div
             className="absolute inset-0"
             style={{
-              backgroundImage: "url('/sky-hero.png')",
+              backgroundImage: "url('/sky-hero.webp')",
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
