@@ -5,8 +5,25 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { pollCommits } from "@/lib/github";
 import { indexGithubRepo } from "@/lib/github-loader";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const CREDITS_PROJECT = 50;
+
+async function assertProjectMember(
+  supabase: SupabaseClient,
+  userId: string,
+  projectId: string,
+) {
+  const { data } = await supabase
+    .from("user_to_projects")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("project_id", projectId)
+    .single();
+  if (!data) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this project" });
+  }
+}
 
 export const projectRouter = createTRPCRouter({
   // ── Credits ──────────────────────────────────────────────────────
@@ -99,8 +116,7 @@ export const projectRouter = createTRPCRouter({
   getCommits: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
-      // Poll for new commits async (don't await)
-      void pollCommits(input.projectId).catch(console.error);
+      await assertProjectMember(ctx.supabase, ctx.userId, input.projectId);
 
       const { data } = await ctx.supabase
         .from("commits")
@@ -108,7 +124,13 @@ export const projectRouter = createTRPCRouter({
         .eq("project_id", input.projectId)
         .order("commit_date", { ascending: false });
 
-      return data ?? [];
+      // Deduplicate by hash in case concurrent pollCommits runs produced duplicates
+      const seen = new Set<string>();
+      return (data ?? []).filter((c) => {
+        if (seen.has(c.commit_hash)) return false;
+        seen.add(c.commit_hash);
+        return true;
+      });
     }),
 
   // ── Q&A ──────────────────────────────────────────────────────────
@@ -122,6 +144,8 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await assertProjectMember(ctx.supabase, ctx.userId, input.projectId);
+
       const { data, error } = await ctx.supabase
         .from("questions")
         .insert({
@@ -141,6 +165,8 @@ export const projectRouter = createTRPCRouter({
   getQuestions: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertProjectMember(ctx.supabase, ctx.userId, input.projectId);
+
       const { data } = await ctx.supabase
         .from("questions")
         .select("*, users(image_url, first_name, last_name)")
@@ -160,6 +186,8 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await assertProjectMember(ctx.supabase, ctx.userId, input.projectId);
+
       const { data, error } = await ctx.supabase
         .from("meetings")
         .insert({
@@ -178,6 +206,8 @@ export const projectRouter = createTRPCRouter({
   getMeetings: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertProjectMember(ctx.supabase, ctx.userId, input.projectId);
+
       const { data } = await ctx.supabase
         .from("meetings")
         .select("*, issues(*)")
@@ -190,18 +220,30 @@ export const projectRouter = createTRPCRouter({
   getMeetingById: protectedProcedure
     .input(z.object({ meetingId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const { data } = await ctx.supabase
+      const { data: meeting } = await ctx.supabase
         .from("meetings")
         .select("*, issues(*)")
         .eq("id", input.meetingId)
         .single();
 
-      return data;
+      if (!meeting) throw new TRPCError({ code: "NOT_FOUND" });
+      await assertProjectMember(ctx.supabase, ctx.userId, meeting.project_id);
+
+      return meeting;
     }),
 
   deleteMeeting: protectedProcedure
     .input(z.object({ meetingId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      const { data: meeting } = await ctx.supabase
+        .from("meetings")
+        .select("project_id")
+        .eq("id", input.meetingId)
+        .single();
+
+      if (!meeting) throw new TRPCError({ code: "NOT_FOUND" });
+      await assertProjectMember(ctx.supabase, ctx.userId, meeting.project_id);
+
       await ctx.supabase.from("meetings").delete().eq("id", input.meetingId);
     }),
 
@@ -209,6 +251,8 @@ export const projectRouter = createTRPCRouter({
   getTeamMembers: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertProjectMember(ctx.supabase, ctx.userId, input.projectId);
+
       const { data } = await ctx.supabase
         .from("user_to_projects")
         .select("*, users(*)")
@@ -230,6 +274,8 @@ export const projectRouter = createTRPCRouter({
   archiveProject: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await assertProjectMember(ctx.supabase, ctx.userId, input.projectId);
+
       await ctx.supabase
         .from("projects")
         .update({ deleted_at: new Date().toISOString() })

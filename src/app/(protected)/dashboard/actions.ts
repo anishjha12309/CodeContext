@@ -46,6 +46,9 @@ export async function askQuestion(question: string, projectId: string) {
   let queryVector: number[];
   try {
     queryVector = await generateEmbedding(question);
+    if (!Array.isArray(queryVector) || queryVector.some((v) => typeof v !== "number" || isNaN(v))) {
+      throw new Error("Invalid embedding returned");
+    }
   } catch {
     stream.update("Failed to generate question embedding. Please try again.");
     stream.done();
@@ -53,7 +56,7 @@ export async function askQuestion(question: string, projectId: string) {
   }
 
   const { data: results } = await supabase.rpc("match_source_code", {
-    query_embedding: `[${queryVector.join(",")}]` as unknown as number[],
+    query_embedding: queryVector,
     match_threshold: 0.5,
     match_count: 10,
     p_project_id: projectId,

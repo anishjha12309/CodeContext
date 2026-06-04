@@ -19,7 +19,10 @@ export async function POST(req: NextRequest) {
     .from("meetings")
     .upload(uniqueName, file, { cacheControl: "3600", upsert: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("Meeting upload failed:", error.message);
+    return NextResponse.json({ error: "Failed to upload file" }, { status: 500 });
+  }
 
   const { data } = supabase.storage.from("meetings").getPublicUrl(uniqueName);
   return NextResponse.json({ url: data.publicUrl });

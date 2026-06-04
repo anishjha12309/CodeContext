@@ -5,7 +5,7 @@ import { useProject } from "@/hooks/use-project";
 import { useRefetch } from "@/hooks/use-refetch";
 import { askQuestion } from "@/app/(protected)/dashboard/actions";
 import { readStreamableValue } from "@ai-sdk/rsc";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { Bot, Send, Loader2, FileCode, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
@@ -20,6 +20,15 @@ import { useTheme } from "next-themes";
 
 type FileRef = { file_name: string; source_code: string; summary: string; similarity: number };
 
+type SavedQuestion = {
+  id: string;
+  question: string;
+  answer: string;
+  created_at: string;
+  files_references: FileRef[];
+  users?: { image_url?: string; first_name?: string; last_name?: string } | null;
+};
+
 export default function QAPage() {
   const { project } = useProject();
   const refetch = useRefetch();
@@ -31,7 +40,7 @@ export default function QAPage() {
   const [refs, setRefs] = useState<FileRef[]>([]);
   const [expandedRef, setExpandedRef] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [selectedQ, setSelectedQ] = useState<{ id: string; question: string; answer: string; created_at: string; files_references: unknown; users?: { image_url?: string; first_name?: string } } | null>(null);
+  const [selectedQ, setSelectedQ] = useState<SavedQuestion | null>(null);
 
   useEffect(() => setMounted(true), []);
   const codeStyle = mounted && resolvedTheme === "light" ? oneLight : oneDark;
@@ -88,7 +97,7 @@ export default function QAPage() {
           </div>
           {answer && (
             <div className="prose prose-sm max-w-none text-zinc-700 dark:text-white/80 dark:prose-invert">
-              <ReactMarkdown components={{ code({ className, children, ...props }: any) { const lang = /language-(\w+)/.exec(className ?? "")?.[1]; return lang ? <SyntaxHighlighter style={codeStyle as any} language={lang} PreTag="div" className="rounded-xl text-xs">{String(children).replace(/\n$/, "")}</SyntaxHighlighter> : <code className="rounded bg-white/8 px-1 py-0.5 text-xs" {...props}>{children}</code>; } }}>{answer}</ReactMarkdown>
+              <ReactMarkdown components={{ code({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { inline?: boolean }) { const lang = /language-(\w+)/.exec(className ?? "")?.[1]; return lang ? <SyntaxHighlighter style={codeStyle as Record<string, React.CSSProperties>} language={lang} PreTag="div" className="rounded-xl text-xs">{String(children).replace(/\n$/, "")}</SyntaxHighlighter> : <code className="rounded bg-white/8 px-1 py-0.5 text-xs" {...props}>{children}</code>; } }}>{answer}</ReactMarkdown>
             </div>
           )}
           {!loading && answer && (
@@ -117,12 +126,12 @@ export default function QAPage() {
       {questions && questions.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-white/25">Saved Q&amp;A</h2>
-          {questions.map((q) => (
-            <div key={q.id} onClick={() => setSelectedQ(q as any)} className="glass-app cursor-pointer rounded-xl p-4 space-y-3 transition-all hover:shadow-md">
+          {(questions as SavedQuestion[]).map((q) => (
+            <div key={q.id} onClick={() => setSelectedQ(q)} className="glass-app cursor-pointer rounded-xl p-4 space-y-3 transition-all hover:shadow-md">
               <div className="flex items-start gap-3">
                 <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarImage src={(q as any).users?.image_url} />
-                  <AvatarFallback className="bg-sky-950 text-[10px] text-sky-300">{((q as any).users?.first_name?.[0] ?? "?").toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={q.users?.image_url ?? undefined} />
+                  <AvatarFallback className="bg-sky-950 text-[10px] text-sky-300">{(q.users?.first_name?.[0] ?? "?").toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-zinc-900 dark:text-white">{q.question}</p>
@@ -146,7 +155,7 @@ export default function QAPage() {
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-1">
             <div className="prose prose-sm max-w-none text-zinc-700 dark:text-white/80 dark:prose-invert">
-              <ReactMarkdown components={{ code({ className, children, ...props }: any) { const lang = /language-(\w+)/.exec(className ?? "")?.[1]; return lang ? <SyntaxHighlighter style={codeStyle as any} language={lang} PreTag="div" className="rounded-xl text-xs">{String(children).replace(/\n$/, "")}</SyntaxHighlighter> : <code className="rounded bg-white/8 px-1 py-0.5 text-xs" {...props}>{children}</code>; } }}>{selectedQ?.answer ?? ""}</ReactMarkdown>
+              <ReactMarkdown components={{ code({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { inline?: boolean }) { const lang = /language-(\w+)/.exec(className ?? "")?.[1]; return lang ? <SyntaxHighlighter style={codeStyle as Record<string, React.CSSProperties>} language={lang} PreTag="div" className="rounded-xl text-xs">{String(children).replace(/\n$/, "")}</SyntaxHighlighter> : <code className="rounded bg-white/8 px-1 py-0.5 text-xs" {...props}>{children}</code>; } }}>{selectedQ?.answer ?? ""}</ReactMarkdown>
             </div>
           </div>
         </DialogContent>
