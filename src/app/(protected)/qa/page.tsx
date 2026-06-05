@@ -39,7 +39,6 @@ export default function QAPage() {
   const [loading, setLoading] = useState(false);
   const [refs, setRefs] = useState<FileRef[]>([]);
   const [expandedRef, setExpandedRef] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [selectedQ, setSelectedQ] = useState<SavedQuestion | null>(null);
 
   useEffect(() => setMounted(true), []);
@@ -54,21 +53,21 @@ export default function QAPage() {
     setLoading(true); setAnswer(""); setRefs([]);
     try {
       const { output, filesReferences } = await askQuestion(question, project.id);
-      setRefs(filesReferences as FileRef[]);
-      for await (const chunk of readStreamableValue(output)) { if (chunk) setAnswer((p) => p + chunk); }
+      const fileRefs = filesReferences as FileRef[];
+      setRefs(fileRefs);
+      let fullAnswer = "";
+      for await (const chunk of readStreamableValue(output)) {
+        if (chunk) { fullAnswer += chunk; setAnswer(fullAnswer); }
+      }
+      if (fullAnswer) {
+        saveAnswer.mutate({ projectId: project.id, question, answer: fullAnswer, filesReferences: fileRefs });
+      }
     } catch { toast.error("Failed to get answer."); } finally { setLoading(false); }
-  }
-
-  async function handleSave() {
-    if (!project || !answer) return;
-    setSaving(true);
-    try { await saveAnswer.mutateAsync({ projectId: project.id, question, answer, filesReferences: refs }); setQuestion(""); setAnswer(""); setRefs([]); }
-    finally { setSaving(false); }
   }
 
   if (!project) return <div className="flex h-96 items-center justify-center"><p className="text-white/40">Select a project to use Q&amp;A.</p></div>;
 
-  const inputCls = "w-full rounded-xl border border-black/10 dark:border-white/8 bg-black/5 dark:bg-white/4 px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none transition-colors focus:border-sky-500";
+  const inputCls = "w-full rounded-xl border border-black/10 dark:border-white/8 bg-black/5 dark:bg-white/4 px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none transition-colors focus:border-zinc-400 dark:focus:border-white/30";
 
   return (
     <div className="space-y-6">
@@ -93,15 +92,15 @@ export default function QAPage() {
           <div className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-zinc-400 dark:text-white/40" />
             <span className="font-semibold text-zinc-900 dark:text-white">Answer</span>
-            {loading && <Loader2 className="ml-auto h-3 w-3 animate-spin text-white/30" />}
+            {loading && <Loader2 className="ml-auto h-3 w-3 animate-spin text-zinc-400 dark:text-white/30" />}
           </div>
           {answer && (
             <div className="prose prose-sm max-w-none text-zinc-700 dark:text-white/80 dark:prose-invert">
               <ReactMarkdown components={{ code({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { inline?: boolean }) { const lang = /language-(\w+)/.exec(className ?? "")?.[1]; return lang ? <SyntaxHighlighter style={codeStyle as Record<string, React.CSSProperties>} language={lang} PreTag="div" className="rounded-xl text-xs">{String(children).replace(/\n$/, "")}</SyntaxHighlighter> : <code className="rounded bg-white/8 px-1 py-0.5 text-xs" {...props}>{children}</code>; } }}>{answer}</ReactMarkdown>
             </div>
           )}
-          {!loading && answer && (
-            <div className="flex items-center justify-between border-t border-black/8 dark:border-white/8 pt-3">
+          {!loading && answer && refs.length > 0 && (
+            <div className="border-t border-black/8 dark:border-white/8 pt-3">
               <div className="flex flex-wrap gap-2">
                 {refs.map((ref) => (
                   <button key={ref.file_name} onClick={() => setExpandedRef(expandedRef === ref.file_name ? null : ref.file_name)} className="glass-app flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-zinc-600 dark:text-white/50 transition-colors hover:text-zinc-900 dark:hover:text-white">
@@ -111,12 +110,11 @@ export default function QAPage() {
                   </button>
                 ))}
               </div>
-              <button onClick={handleSave} disabled={saving} className="text-xs text-zinc-400 dark:text-white/40 transition-colors hover:text-zinc-900 dark:hover:text-white">{saving ? "Saving…" : "Save answer"}</button>
             </div>
           )}
           {expandedRef && (
             <div className="glass-app rounded-xl p-3 text-xs">
-              <p className="mb-2 font-mono text-white/40">{expandedRef}</p>
+              <p className="mb-2 font-mono text-zinc-500 dark:text-white/40">{expandedRef}</p>
               <SyntaxHighlighter style={codeStyle as any} language="typescript" PreTag="div" className="max-h-64 overflow-auto rounded-lg text-xs">{refs.find((r) => r.file_name === expandedRef)?.source_code?.slice(0, 3000) ?? ""}</SyntaxHighlighter>
             </div>
           )}
@@ -137,7 +135,7 @@ export default function QAPage() {
                   <p className="text-sm font-medium text-zinc-900 dark:text-white">{q.question}</p>
                   <p className="mt-0.5 text-xs text-zinc-500 dark:text-white/30">{formatDistanceToNow(new Date(q.created_at), { addSuffix: true })}</p>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); deleteQuestion.mutate({ questionId: q.id }); }} disabled={deleteQuestion.isPending} className="shrink-0 rounded-lg p-1.5 text-white/25 transition-colors hover:bg-red-500/10 hover:text-red-500">
+                <button onClick={(e) => { e.stopPropagation(); deleteQuestion.mutate({ questionId: q.id }); }} disabled={deleteQuestion.isPending} className="shrink-0 rounded-lg p-1.5 text-zinc-300 dark:text-white/25 transition-colors hover:bg-red-500/10 hover:text-red-500">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -151,7 +149,7 @@ export default function QAPage() {
         <DialogContent className="max-h-[80vh] max-w-3xl overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="pr-6 text-base font-semibold text-zinc-900 dark:text-white">{selectedQ?.question}</DialogTitle>
-            <p className="text-xs text-white/30">{selectedQ && formatDistanceToNow(new Date(selectedQ.created_at), { addSuffix: true })}</p>
+            <p className="text-xs text-zinc-400 dark:text-white/30">{selectedQ && formatDistanceToNow(new Date(selectedQ.created_at), { addSuffix: true })}</p>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-1">
             <div className="prose prose-sm max-w-none text-zinc-700 dark:text-white/80 dark:prose-invert">
