@@ -24,7 +24,6 @@ export default async function LandingPage() {
 
   return (
     <SmoothScroll>
-      <link rel="preload" href="/sky-hero.webp" as="image" type="image/webp" />
       <div className="relative min-h-screen overflow-x-hidden bg-[#080808] text-white">
         {/* ═══════════════════════════════════════════════════════
           GLASSMORPHISM NAVBAR (Compact, floaty, centered pill)
@@ -81,14 +80,13 @@ export default async function LandingPage() {
           className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
         >
           {/* Sky hero background */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: "url('/sky-hero.webp')",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-            }}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+            src="https://cdn.prod.website-files.com/68acbc076b672f730e0c77b9%2F68bb73e8d95f81619ab0f106_Clouds1-transcode.mp4"
           />
           <div className="hero-overlay absolute inset-0" />
 
