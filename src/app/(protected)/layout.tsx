@@ -73,7 +73,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-black/8 px-5 dark:border-white/8">
         <div className="flex items-center">
           <Logo className="mt-px h-5 w-auto text-zinc-900 dark:text-white" />
-          <span className="gradient-text text-lg font-semibold">
+          <span className="text-lg font-semibold text-zinc-900 dark:text-white">
             CodeContext
           </span>
         </div>
@@ -100,14 +100,14 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
                 active
-                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
-                  : "text-zinc-600 hover:bg-black/5 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
+                  ? "bg-zinc-100 text-zinc-900 dark:bg-white/8 dark:text-white"
+                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
               )}
             >
               <Icon
                 className={cn(
                   "h-4 w-4 shrink-0",
-                  active && "text-sky-500 dark:text-sky-400",
+                  active ? "text-zinc-800 dark:text-white" : "text-zinc-400 dark:text-white/40",
                 )}
               />
               {item.label}
@@ -158,15 +158,15 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                       className={cn(
                         "flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
                         p.id === projectId
-                          ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
-                          : "text-zinc-600 hover:bg-black/5 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
+                          ? "bg-zinc-100 text-zinc-900 dark:bg-white/8 dark:text-white"
+                          : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
                       )}
                     >
                       <div
                         className={cn(
                           "h-1.5 w-1.5 shrink-0 rounded-full",
                           p.id === projectId
-                            ? "bg-sky-400"
+                            ? "bg-zinc-900 dark:bg-white"
                             : "bg-zinc-300 dark:bg-white/20",
                         )}
                       />
@@ -208,7 +208,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           >
             Credits
           </span>
-          <span className="text-sm font-bold text-sky-600 dark:text-sky-400">
+          <span className="font-mono text-sm font-bold text-zinc-900 dark:text-white">
             {credits ?? "—"}
           </span>
         </div>
@@ -238,13 +238,7 @@ export default function ProtectedLayout({
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#fafafa] dark:bg-black">
-      {/* Ambient sky orbs — give glass something to refract */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-sky-400/10 blur-3xl dark:bg-sky-500/8" />
-        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-cyan-400/8 blur-3xl dark:bg-sky-500/6" />
-        <div className="absolute top-1/2 right-1/4 h-72 w-72 rounded-full bg-sky-300/6 blur-3xl dark:bg-sky-400/4" />
-      </div>
+    <div className="flex min-h-screen bg-white dark:bg-[#0a1628]">
 
       {/* Desktop sidebar */}
       <aside className="glass-app-nav fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-black/8 lg:flex dark:border-white/6">
@@ -284,7 +278,7 @@ export default function ProtectedLayout({
       <div className="glass-app-nav fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-black/8 px-4 lg:hidden dark:border-white/6">
         <div className="flex items-center gap-2">
           <Logo className="h-5 w-auto text-zinc-900 dark:text-white" />
-          <span className="gradient-text font-semibold">CodeContext</span>
+          <span className="font-semibold text-zinc-900 dark:text-white">CodeContext</span>
         </div>
         <button
           onClick={() => setMobileOpen(true)}

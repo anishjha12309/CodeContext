@@ -36,11 +36,11 @@ function IndexingState() {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-10 text-center">
       <div className="relative">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/10">
-          <GitCommit className="h-7 w-7 text-sky-400" />
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-white/6">
+          <GitCommit className="h-7 w-7 text-zinc-500 dark:text-white/50" />
         </div>
-        <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black">
-          <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
+        <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white dark:bg-black border border-zinc-200 dark:border-white/10">
+          <Loader2 className="h-4 w-4 animate-spin text-zinc-500 dark:text-white/50" />
         </div>
       </div>
       <div>
@@ -78,7 +78,7 @@ export default function DashboardPage() {
     return (
       <div className="flex h-96 flex-col items-center justify-center gap-4 text-center">
         <div className="glass-app flex h-16 w-16 items-center justify-center rounded-2xl">
-          <FolderOpen className="h-8 w-8 text-sky-400" />
+          <FolderOpen className="h-8 w-8 text-zinc-400 dark:text-white/40" />
         </div>
         <div>
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">No project selected</h2>
@@ -88,7 +88,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/create"
-          className="rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-500"
+          className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90"
         >
           Create project
         </Link>
@@ -121,7 +121,7 @@ export default function DashboardPage() {
       {/* Recent commits */}
       <div className="glass-app rounded-2xl p-5">
         <h2 className="mb-4 flex items-center gap-2 font-semibold text-zinc-900 dark:text-white">
-          <GitCommit className="h-4 w-4 text-sky-400" />
+          <GitCommit className="h-4 w-4 text-zinc-400 dark:text-white/40" />
           Recent Commits
           {isLoading && <Loader2 className="ml-1 h-3.5 w-3.5 animate-spin text-white/30" />}
         </h2>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
                 <div className="flex items-start gap-3">
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarImage src={commit.commit_author_avatar} />
-                    <AvatarFallback className="bg-sky-950 text-xs text-sky-300">
+                    <AvatarFallback className="bg-zinc-800 text-xs text-zinc-300">
                       {commit.commit_author_name.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

@@ -55,9 +55,9 @@ export default function MeetingsPage() {
   if (!project) return <div className="flex h-96 items-center justify-center"><p className="text-white/40">Select a project to manage meetings.</p></div>;
 
   const statusBadge = (status: string) => {
-    if (status === "COMPLETED") return <div className="flex items-center gap-1.5 rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-400"><CheckCircle className="h-3 w-3" />Done</div>;
-    if (status === "FAILED") return <div className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-400"><XCircle className="h-3 w-3" />Failed</div>;
-    return <div className="flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-white/50"><Loader2 className="h-3 w-3 animate-spin" />Processing</div>;
+    if (status === "COMPLETED") return <div className="flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-white/6 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-white/60"><CheckCircle className="h-3 w-3" />Done</div>;
+    if (status === "FAILED") return <div className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500 dark:text-red-400"><XCircle className="h-3 w-3" />Failed</div>;
+    return <div className="flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-white/5 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:text-white/50"><Loader2 className="h-3 w-3 animate-spin" />Processing</div>;
   };
 
   return (
@@ -69,21 +69,21 @@ export default function MeetingsPage() {
 
       <div
         {...getRootProps()}
-        className={`glass-app-strong cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all ${isDragActive ? "border-sky-500 bg-sky-500/5" : "border-black/10 dark:border-white/8 hover:border-sky-500/50"} ${uploading || !project ? "cursor-not-allowed opacity-50" : ""}`}
+        className={`glass-app-strong cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all ${isDragActive ? "border-zinc-400 dark:border-white/30 bg-zinc-50 dark:bg-white/3" : "border-black/10 dark:border-white/8 hover:border-zinc-300 dark:hover:border-white/20"} ${uploading || !project ? "cursor-not-allowed opacity-50" : ""}`}
       >
         <input {...getInputProps()} />
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/10">
-          <Upload className="h-6 w-6 text-sky-400" />
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-white/6">
+          <Upload className="h-6 w-6 text-zinc-500 dark:text-white/50" />
         </div>
         {uploading ? (
           <>
             <p className="font-semibold text-zinc-900 dark:text-white">Uploading… {progress}%</p>
-            <div className="mx-auto mt-3 h-1.5 w-48 rounded-full bg-white/8">
-              <div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${progress}%` }} />
+            <div className="mx-auto mt-3 h-1.5 w-48 rounded-full bg-zinc-200 dark:bg-white/8">
+              <div className="h-full rounded-full bg-zinc-900 dark:bg-white transition-all" style={{ width: `${progress}%` }} />
             </div>
           </>
         ) : isDragActive ? (
-          <p className="font-semibold text-sky-400">Drop the audio file here</p>
+          <p className="font-semibold text-zinc-700 dark:text-white/70">Drop the audio file here</p>
         ) : (
           <>
             <p className="font-semibold text-zinc-900 dark:text-white">Drop audio file or click to upload</p>
@@ -128,7 +128,7 @@ export default function MeetingsPage() {
                         <div key={issue.id} className="glass-app rounded-xl p-3">
                           <div className="mb-1.5 flex items-center gap-2">
                             <span className="font-mono text-[10px] text-white/30">{issue.start_time} – {issue.end_time}</span>
-                            <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-400">{issue.gist}</span>
+                            <span className="rounded-full bg-zinc-100 dark:bg-white/6 px-2 py-0.5 text-[10px] text-zinc-600 dark:text-white/50">{issue.gist}</span>
                           </div>
                           <p className="text-sm font-medium text-zinc-900 dark:text-white">{issue.headline}</p>
                           <p className="mt-1 text-xs text-white/40">{issue.summary}</p>

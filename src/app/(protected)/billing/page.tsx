@@ -56,8 +56,8 @@ export default function BillingPage() {
 
       {/* Balance */}
       <div className="glass-app-strong inline-flex items-center gap-4 rounded-2xl px-6 py-5">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/10">
-          <Zap className="h-6 w-6 text-sky-400" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-white/6">
+          <Zap className="h-6 w-6 text-zinc-500 dark:text-white/50" />
         </div>
         <div>
           <p className="text-xs font-medium text-zinc-500 dark:text-white/40">Current balance</p>
@@ -70,9 +70,9 @@ export default function BillingPage() {
       {/* Packages */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {PACKAGES.map((pkg) => (
-          <div key={pkg.amount} className={`glass-app relative rounded-2xl p-5 transition-all ${pkg.popular ? "border-sky-500/30 ring-1 ring-sky-500/20" : ""}`}>
+          <div key={pkg.amount} className={`glass-app relative rounded-2xl p-5 transition-all ${pkg.popular ? "border-zinc-300 dark:border-white/20 ring-1 ring-zinc-200 dark:ring-white/10" : ""}`}>
             {pkg.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-sky-600 px-3 py-0.5 text-xs font-semibold text-white">Popular</div>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-white px-3 py-0.5 text-xs font-semibold text-white dark:text-black">Popular</div>
             )}
             <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-white/40">{pkg.label}</p>
             <p className="mt-3 text-3xl font-bold text-zinc-900 dark:text-white">₹{pkg.amount}</p>
@@ -80,12 +80,12 @@ export default function BillingPage() {
             <ul className="mt-4 space-y-1.5">
               {pkg.perks.map((p) => (
                 <li key={p} className="flex items-center gap-2 text-xs text-zinc-500 dark:text-white/40">
-                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-sky-400" />
+                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-white/40" />
                   {p}
                 </li>
               ))}
             </ul>
-            <button onClick={() => handlePurchase(pkg)} disabled={loading === pkg.amount} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 py-2.5 text-sm font-semibold text-white transition-all hover:bg-sky-500 disabled:opacity-50">
+            <button onClick={() => handlePurchase(pkg)} disabled={loading === pkg.amount} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90 disabled:opacity-50">
               <CreditCard className="h-4 w-4" />
               {loading === pkg.amount ? "Processing…" : "Buy now"}
             </button>

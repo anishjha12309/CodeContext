@@ -63,7 +63,7 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
   return (
     <div className="glass-app rounded-2xl p-5 flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <Bot className="h-5 w-5 text-sky-400" />
+        <Bot className="h-5 w-5 text-zinc-400 dark:text-white/40" />
         <h2 className="font-semibold text-zinc-900 dark:text-white">Ask about this codebase</h2>
       </div>
 
@@ -73,17 +73,17 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAsk(); }}
         placeholder="How does the auth flow work?…"
         rows={3}
-        className="w-full resize-none rounded-xl border border-black/10 dark:border-white/8 bg-black/5 dark:bg-white/4 px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none transition-colors focus:border-sky-500 dark:focus:border-sky-500"
+        className="w-full resize-none rounded-xl border border-black/10 dark:border-white/8 bg-black/5 dark:bg-white/4 px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none transition-colors focus:border-zinc-400 dark:focus:border-white/30"
       />
 
       <div className="flex items-center justify-between">
-        <Link href="/qa" className="text-xs text-zinc-500 dark:text-white/40 transition-colors hover:text-sky-600 dark:hover:text-sky-400">
+        <Link href="/qa" className="text-xs text-zinc-500 dark:text-white/40 transition-colors hover:text-zinc-900 dark:hover:text-white">
           View all Q&amp;A →
         </Link>
         <button
           onClick={handleAsk}
           disabled={loading || !question.trim()}
-          className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-sky-500 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90 disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           {loading ? "Thinking…" : "Ask"}

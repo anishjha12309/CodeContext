@@ -25,27 +25,27 @@
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, monospace;
 
-  /* ── App glass vars (light mode defaults) ── */
-  --app-glass-bg: rgba(255, 255, 255, 0.65);
-  --app-glass-border: rgba(0, 0, 0, 0.08);
-  --app-glass-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --app-glass-strong-bg: rgba(255, 255, 255, 0.82);
-  --app-glass-strong-border: rgba(0, 0, 0, 0.09);
-  --app-glass-strong-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --app-glass-nav-bg: rgba(250, 250, 250, 0.92);
-  --app-glass-nav-border: rgba(0, 0, 0, 0.07);
+  /* ── App glass vars (light mode — solid white cards on white bg) ── */
+  --app-glass-bg: #ffffff;
+  --app-glass-border: rgba(0, 0, 0, 0.09);
+  --app-glass-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --app-glass-strong-bg: #ffffff;
+  --app-glass-strong-border: rgba(0, 0, 0, 0.10);
+  --app-glass-strong-shadow: 0 4px 16px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --app-glass-nav-bg: #ffffff;
+  --app-glass-nav-border: rgba(0, 0, 0, 0.08);
 }
 
-/* ── App glass vars (dark mode overrides) ── */
+/* ── App glass vars (dark mode — navy-tinted panels on #0a1628 bg) ── */
 .dark {
-  --app-glass-bg: rgba(255, 255, 255, 0.04);
+  --app-glass-bg: rgba(255, 255, 255, 0.05);
   --app-glass-border: rgba(255, 255, 255, 0.08);
-  --app-glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --app-glass-strong-bg: rgba(255, 255, 255, 0.055);
+  --app-glass-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --app-glass-strong-bg: rgba(255, 255, 255, 0.07);
   --app-glass-strong-border: rgba(255, 255, 255, 0.10);
-  --app-glass-strong-shadow: 0 8px 40px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.09);
-  --app-glass-nav-bg: rgba(0, 0, 0, 0.98);
-  --app-glass-nav-border: rgba(255, 255, 255, 0.07);
+  --app-glass-strong-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --app-glass-nav-bg: rgba(8, 18, 38, 0.98);
+  --app-glass-nav-border: rgba(255, 255, 255, 0.08);
 }
 
 /* ─── Smooth scrollbar ─── */

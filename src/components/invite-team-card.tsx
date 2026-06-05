@@ -23,7 +23,7 @@ export function InviteTeamCard({ projectId }: { projectId: string }) {
     >
       <Users className="h-4 w-4" />
       Invite team
-      {copied ? <Check className="h-3.5 w-3.5 text-sky-400" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3.5 w-3.5 text-zinc-500 dark:text-white/50" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
   );
 }

@@ -81,7 +81,7 @@ export default function QAPage() {
         <textarea value={question} onChange={(e) => setQuestion(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAsk(); }} placeholder="How does authentication work?…" rows={3} className={inputCls} />
         <div className="flex items-center justify-between">
           <span className="text-xs text-zinc-500 dark:text-white/30">⌘ + Enter to send · 1 credit per question</span>
-          <button onClick={handleAsk} disabled={loading || !question.trim()} className="flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-sky-500 disabled:opacity-50">
+          <button onClick={handleAsk} disabled={loading || !question.trim()} className="flex items-center gap-2 rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90 disabled:opacity-50">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {loading ? "Thinking…" : "Ask"}
           </button>
@@ -91,7 +91,7 @@ export default function QAPage() {
       {(answer || loading) && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-app rounded-2xl p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-sky-400" />
+            <Bot className="h-5 w-5 text-zinc-400 dark:text-white/40" />
             <span className="font-semibold text-zinc-900 dark:text-white">Answer</span>
             {loading && <Loader2 className="ml-auto h-3 w-3 animate-spin text-white/30" />}
           </div>
@@ -105,13 +105,13 @@ export default function QAPage() {
               <div className="flex flex-wrap gap-2">
                 {refs.map((ref) => (
                   <button key={ref.file_name} onClick={() => setExpandedRef(expandedRef === ref.file_name ? null : ref.file_name)} className="glass-app flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-zinc-600 dark:text-white/50 transition-colors hover:text-zinc-900 dark:hover:text-white">
-                    <FileCode className="h-3 w-3" />
+                    <FileCode className="h-3 w-3 text-zinc-400 dark:text-white/40" />
                     {ref.file_name.split("/").pop()}
                     {expandedRef === ref.file_name ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   </button>
                 ))}
               </div>
-              <button onClick={handleSave} disabled={saving} className="text-xs text-white/40 transition-colors hover:text-sky-400">{saving ? "Saving…" : "Save answer"}</button>
+              <button onClick={handleSave} disabled={saving} className="text-xs text-zinc-400 dark:text-white/40 transition-colors hover:text-zinc-900 dark:hover:text-white">{saving ? "Saving…" : "Save answer"}</button>
             </div>
           )}
           {expandedRef && (
@@ -131,7 +131,7 @@ export default function QAPage() {
               <div className="flex items-start gap-3">
                 <Avatar className="h-7 w-7 shrink-0">
                   <AvatarImage src={q.users?.image_url ?? undefined} />
-                  <AvatarFallback className="bg-sky-950 text-[10px] text-sky-300">{(q.users?.first_name?.[0] ?? "?").toUpperCase()}</AvatarFallback>
+                  <AvatarFallback className="bg-zinc-800 text-[10px] text-zinc-300">{(q.users?.first_name?.[0] ?? "?").toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-zinc-900 dark:text-white">{q.question}</p>
