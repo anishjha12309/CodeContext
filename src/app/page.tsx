@@ -180,6 +180,7 @@ export default async function LandingPage() {
               credit card required
             </p>
           </div>
+
         </section>
 
         {/* ═══════════════════════════════════════════════════════
