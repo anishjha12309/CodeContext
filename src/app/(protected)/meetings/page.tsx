@@ -52,7 +52,7 @@ export default function MeetingsPage() {
     maxFiles: 1, disabled: uploading || !project,
   });
 
-  if (!project) return <div className="flex h-96 items-center justify-center"><p className="text-white/40">Select a project to manage meetings.</p></div>;
+  if (!project) return <div className="flex h-96 items-center justify-center"><p className="text-zinc-500 dark:text-white/40">Select a project to manage meetings.</p></div>;
 
   const statusBadge = (status: string) => {
     if (status === "COMPLETED") return <div className="flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-white/6 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-white/60"><CheckCircle className="h-3 w-3" />Done</div>;
@@ -61,25 +61,25 @@ export default function MeetingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Meetings</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Meetings</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-white/40">Upload audio recordings to get AI-generated chapter summaries.</p>
       </div>
 
       <div
         {...getRootProps()}
-        className={`glass-app-strong cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all ${isDragActive ? "border-zinc-400 dark:border-white/30 bg-zinc-50 dark:bg-white/3" : "border-black/10 dark:border-white/8 hover:border-zinc-300 dark:hover:border-white/20"} ${uploading || !project ? "cursor-not-allowed opacity-50" : ""}`}
+        className={`glass-app-strong ios-specular cursor-pointer rounded-3xl border border-dashed p-10 text-center transition-all duration-200 ${isDragActive ? "border-zinc-400 dark:border-white/30 scale-[1.01]" : "border-black/12 dark:border-white/12 hover:border-zinc-400 dark:hover:border-white/25"} ${uploading || !project ? "cursor-not-allowed opacity-50" : ""}`}
       >
         <input {...getInputProps()} />
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-white/6">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black/5 dark:bg-white/8">
           <Upload className="h-6 w-6 text-zinc-500 dark:text-white/50" />
         </div>
         {uploading ? (
           <>
             <p className="font-semibold text-zinc-900 dark:text-white">Uploading… {progress}%</p>
-            <div className="mx-auto mt-3 h-1.5 w-48 rounded-full bg-zinc-200 dark:bg-white/8">
-              <div className="h-full rounded-full bg-zinc-900 dark:bg-white transition-all" style={{ width: `${progress}%` }} />
+            <div className="mx-auto mt-3 h-1.5 w-48 overflow-hidden rounded-full bg-black/8 dark:bg-white/8">
+              <div className="h-full rounded-full bg-zinc-900 transition-all dark:bg-white" style={{ width: `${progress}%` }} />
             </div>
           </>
         ) : isDragActive ? (
@@ -93,16 +93,16 @@ export default function MeetingsPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-white/4" />)}</div>
+        <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5" />)}</div>
       ) : meetings?.length === 0 ? (
-        <div className="glass-app rounded-xl p-8 text-center">
-          <Mic className="mx-auto mb-2 h-8 w-8 text-white/20" />
-          <p className="text-sm text-white/40">No meetings yet. Upload an audio recording above.</p>
+        <div className="glass-app ios-specular rounded-3xl p-10 text-center">
+          <Mic className="mx-auto mb-2 h-8 w-8 text-zinc-300 dark:text-white/20" />
+          <p className="text-sm text-zinc-500 dark:text-white/40">No meetings yet. Upload an audio recording above.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {meetings?.map((meeting) => (
-            <div key={meeting.id} className="glass-app overflow-hidden rounded-xl">
+            <div key={meeting.id} className="glass-app overflow-hidden rounded-2xl">
               <div className="flex items-center gap-4 p-4">
                 {statusBadge(meeting.status)}
                 <div className="min-w-0 flex-1">
@@ -111,27 +111,27 @@ export default function MeetingsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {meeting.status === "COMPLETED" && (meeting.issues?.length ?? 0) > 0 && (
-                    <button onClick={() => setExpandedId(expandedId === meeting.id ? null : meeting.id)} className="rounded-lg p-1.5 text-white/40 transition-colors hover:bg-white/5 hover:text-white">
+                    <button onClick={() => setExpandedId(expandedId === meeting.id ? null : meeting.id)} className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-black/5 hover:text-zinc-900 dark:text-white/40 dark:hover:bg-white/5 dark:hover:text-white">
                       {expandedId === meeting.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
                   )}
-                  <button onClick={() => deleteMeeting.mutate({ meetingId: meeting.id })} className="rounded-lg p-1.5 text-white/25 transition-colors hover:bg-red-500/10 hover:text-red-400">
+                  <button onClick={() => deleteMeeting.mutate({ meetingId: meeting.id })} className="rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-red-500/10 hover:text-red-500 dark:text-white/25 dark:hover:text-red-400">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
               <AnimatePresence>
                 {expandedId === meeting.id && meeting.issues && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-white/8">
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-black/8 dark:border-white/8">
                     <div className="space-y-3 p-4">
                       {(meeting.issues as Array<{ id: string; start_time: string; end_time: string; gist: string; headline: string; summary: string }>).map((issue) => (
-                        <div key={issue.id} className="glass-app rounded-xl p-3">
+                        <div key={issue.id} className="glass-app rounded-2xl p-3">
                           <div className="mb-1.5 flex items-center gap-2">
-                            <span className="font-mono text-[10px] text-white/30">{issue.start_time} – {issue.end_time}</span>
-                            <span className="rounded-full bg-zinc-100 dark:bg-white/6 px-2 py-0.5 text-[10px] text-zinc-600 dark:text-white/50">{issue.gist}</span>
+                            <span className="font-mono text-[10px] text-zinc-400 dark:text-white/30">{issue.start_time} – {issue.end_time}</span>
+                            <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] text-zinc-600 dark:bg-white/8 dark:text-white/50">{issue.gist}</span>
                           </div>
                           <p className="text-sm font-medium text-zinc-900 dark:text-white">{issue.headline}</p>
-                          <p className="mt-1 text-xs text-white/40">{issue.summary}</p>
+                          <p className="mt-1 text-xs text-zinc-500 dark:text-white/40">{issue.summary}</p>
                         </div>
                       ))}
                     </div>

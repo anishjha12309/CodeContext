@@ -53,20 +53,20 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Billing</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Billing</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-white/40">Purchase credits to create projects and ask questions.</p>
       </div>
 
       {/* Balance */}
-      <div className="glass-app-strong inline-flex items-center gap-4 rounded-2xl px-6 py-5">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-white/6">
+      <div className="glass-app-strong ios-specular inline-flex items-center gap-4 rounded-3xl px-6 py-5">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black/5 dark:bg-white/8">
           <Zap className="h-6 w-6 text-zinc-500 dark:text-white/50" />
         </div>
         <div>
           <p className="text-xs font-medium text-zinc-500 dark:text-white/40">Current balance</p>
-          <p className="mt-0.5 text-3xl font-bold text-zinc-900 dark:text-white">
+          <p className="mt-0.5 text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">
             {credits ?? 0}<span className="ml-1.5 text-sm font-normal text-zinc-500 dark:text-white/40">credits</span>
           </p>
         </div>
@@ -75,12 +75,12 @@ export default function BillingPage() {
       {/* Packages */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {PACKAGES.map((pkg) => (
-          <div key={pkg.amount} className={`glass-app relative rounded-2xl p-5 transition-all ${pkg.popular ? "border-zinc-300 dark:border-white/20 ring-1 ring-zinc-200 dark:ring-white/10" : ""}`}>
+          <div key={pkg.amount} className={`glass-app ios-pressable relative rounded-3xl p-5 ${pkg.popular ? "ios-specular ring-1 ring-zinc-300 dark:ring-white/20" : ""}`}>
             {pkg.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-white px-3 py-0.5 text-xs font-semibold text-white dark:text-black">Popular</div>
+              <div className="ios-btn-primary absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-xs font-semibold">Popular</div>
             )}
             <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-white/40">{pkg.label}</p>
-            <p className="mt-3 text-3xl font-bold text-zinc-900 dark:text-white">₹{pkg.amount}</p>
+            <p className="mt-3 text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">₹{pkg.amount}</p>
             <p className="mt-0.5 text-sm text-zinc-600 dark:text-white/60">{pkg.credits} credits</p>
             <ul className="mt-4 space-y-1.5">
               {pkg.perks.map((p) => (
@@ -90,7 +90,7 @@ export default function BillingPage() {
                 </li>
               ))}
             </ul>
-            <button onClick={() => handlePurchase(pkg)} disabled={loading === pkg.amount} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90 disabled:opacity-50">
+            <button onClick={() => handlePurchase(pkg)} disabled={loading === pkg.amount} className="ios-btn-primary ios-pressable mt-5 flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-semibold disabled:opacity-50">
               <CreditCard className="h-4 w-4" />
               {loading === pkg.amount ? "Processing…" : "Buy now"}
             </button>
@@ -98,7 +98,7 @@ export default function BillingPage() {
         ))}
       </div>
 
-      <div className="glass-app rounded-xl p-4 space-y-1.5 text-xs text-zinc-500 dark:text-white/30">
+      <div className="glass-app rounded-2xl p-4 space-y-1.5 text-xs text-zinc-500 dark:text-white/40">
         <p>• 50 credits to create a project</p>
         <p>• 1 credit per Q&amp;A question</p>
         <p>• New accounts start with 150 free credits</p>

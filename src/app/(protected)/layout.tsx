@@ -98,16 +98,16 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               href={item.href}
               onClick={onClose}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-200",
                 active
-                  ? "bg-zinc-100 text-zinc-900 dark:bg-white/8 dark:text-white"
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
+                  ? "app-nav-active text-zinc-900 dark:text-white"
+                  : "text-zinc-500 hover:bg-black/4 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
               )}
             >
               <Icon
                 className={cn(
-                  "h-4 w-4 shrink-0",
-                  active ? "text-zinc-800 dark:text-white" : "text-zinc-400 dark:text-white/40",
+                  "h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110",
+                  active ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-white/40",
                 )}
               />
               {item.label}
@@ -127,7 +127,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
         <button
           onClick={() => setProjectsOpen((o) => !o)}
-          className="glass-app flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-700 transition-colors hover:text-zinc-900 dark:text-white/60 dark:hover:text-white"
+          className="ios-field flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-700 transition-colors hover:text-zinc-900 dark:text-white/70 dark:hover:text-white"
         >
           <span className="truncate">{project?.name ?? "Select project"}</span>
           <ChevronDown
@@ -156,10 +156,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                         onClose?.();
                       }}
                       className={cn(
-                        "flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+                        "flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all",
                         p.id === projectId
-                          ? "bg-zinc-100 text-zinc-900 dark:bg-white/8 dark:text-white"
-                          : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
+                          ? "bg-black/5 text-zinc-900 dark:bg-white/8 dark:text-white"
+                          : "text-zinc-500 hover:bg-black/4 hover:text-zinc-900 dark:text-white/50 dark:hover:bg-white/5 dark:hover:text-white",
                       )}
                     >
                       <div
@@ -188,7 +188,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                 <Link
                   href="/create"
                   onClick={onClose}
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-500 transition-colors hover:bg-black/5 hover:text-sky-600 dark:text-white/40 dark:hover:bg-white/5 dark:hover:text-sky-400"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-500 transition-colors hover:bg-black/4 hover:text-zinc-900 dark:text-white/40 dark:hover:bg-white/5 dark:hover:text-white"
                 >
                   <Plus className="h-4 w-4" />
                   New project
@@ -201,14 +201,14 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       {/* Bottom: credits + user + theme toggle */}
       <div className="shrink-0 space-y-2 border-t border-black/8 p-3 dark:border-white/8">
-        <div className="glass-app flex items-center justify-between rounded-xl px-3 py-2.5">
+        <div className="ios-field flex items-center justify-between rounded-xl px-3 py-2.5">
           <span
             className="text-xs text-zinc-500 dark:text-white/40"
             style={{ fontFamily: "var(--font-mono)" }}
           >
             Credits
           </span>
-          <span className="font-mono text-sm font-bold text-zinc-900 dark:text-white">
+          <span className="font-mono text-sm font-bold tabular-nums text-zinc-900 dark:text-white">
             {credits ?? "—"}
           </span>
         </div>
@@ -238,10 +238,10 @@ export default function ProtectedLayout({
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-white dark:bg-[#0a1628]">
+    <div className="app-shell flex min-h-screen">
 
       {/* Desktop sidebar */}
-      <aside className="glass-app-nav fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-black/8 lg:flex dark:border-white/6">
+      <aside className="glass-app-nav fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-black/8 lg:flex dark:border-white/8">
         <SidebarContent />
       </aside>
 
@@ -267,7 +267,7 @@ export default function ProtectedLayout({
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
-            className="glass-app-nav fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-black/8 lg:hidden dark:border-white/6"
+            className="glass-app-nav fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-black/8 lg:hidden dark:border-white/8"
           >
             <SidebarContent onClose={() => setMobileOpen(false)} />
           </motion.aside>
@@ -275,7 +275,7 @@ export default function ProtectedLayout({
       </AnimatePresence>
 
       {/* Mobile top bar */}
-      <div className="glass-app-nav fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-black/8 px-4 lg:hidden dark:border-white/6">
+      <div className="glass-app-nav fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-black/8 px-4 lg:hidden dark:border-white/8">
         <div className="flex items-center gap-2">
           <Logo className="h-5 w-auto text-zinc-900 dark:text-white" />
           <span className="font-semibold text-zinc-900 dark:text-white">CodeContext</span>
@@ -283,7 +283,7 @@ export default function ProtectedLayout({
         <button
           onClick={() => setMobileOpen(true)}
           aria-label="Open menu"
-          className="rounded-xl p-2 text-zinc-600 transition-colors hover:bg-black/8 dark:text-zinc-400 dark:hover:bg-white/8"
+          className="ios-pressable rounded-xl p-2 text-zinc-600 hover:bg-black/8 dark:text-zinc-400 dark:hover:bg-white/8"
         >
           <Menu className="h-5 w-5" />
         </button>

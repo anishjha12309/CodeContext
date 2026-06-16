@@ -12,20 +12,22 @@ import { toast } from "sonner";
 import { useEffect } from "react";
 import { AskQuestionCard } from "@/components/ask-question-card";
 import { InviteTeamCard } from "@/components/invite-team-card";
+import { cn } from "@/lib/utils";
 
 function CommitSkeleton() {
+  const bar = "animate-pulse rounded-full bg-black/8 dark:bg-white/8";
   return (
-    <div className="glass-app rounded-xl p-3.5">
+    <div className="glass-app rounded-2xl p-3.5">
       <div className="flex items-start gap-3">
-        <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-white/8" />
+        <div className={cn("h-8 w-8 shrink-0", bar)} />
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-20 animate-pulse rounded-full bg-white/8" />
-            <div className="h-3 w-12 animate-pulse rounded-full bg-white/8" />
-            <div className="ml-auto h-3 w-16 animate-pulse rounded-full bg-white/8" />
+            <div className={cn("h-3 w-20", bar)} />
+            <div className={cn("h-3 w-12", bar)} />
+            <div className={cn("ml-auto h-3 w-16", bar)} />
           </div>
-          <div className="h-3 w-3/4 animate-pulse rounded-full bg-white/8" />
-          <div className="h-3 w-1/2 animate-pulse rounded-full bg-white/8" />
+          <div className={cn("h-3 w-3/4", bar)} />
+          <div className={cn("h-3 w-1/2", bar)} />
         </div>
       </div>
     </div>
@@ -34,24 +36,24 @@ function CommitSkeleton() {
 
 function IndexingState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
       <div className="relative">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-white/6">
+        <div className="glass-app-strong ios-specular flex h-16 w-16 items-center justify-center rounded-2xl">
           <GitCommit className="h-7 w-7 text-zinc-500 dark:text-white/50" />
         </div>
-        <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white dark:bg-black border border-zinc-200 dark:border-white/10">
-          <Loader2 className="h-4 w-4 animate-spin text-zinc-500 dark:text-white/50" />
+        <div className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm dark:bg-black border border-zinc-200 dark:border-white/10">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500 dark:text-white/60" />
         </div>
       </div>
       <div>
-        <p className="text-sm font-semibold text-white">Indexing repository…</p>
-        <p className="mt-1 text-xs text-white/40">This can take a few minutes for large repos</p>
+        <p className="text-sm font-semibold text-zinc-900 dark:text-white">Indexing repository…</p>
+        <p className="mt-1 text-xs text-zinc-500 dark:text-white/40">This can take a few minutes for large repos</p>
       </div>
       <div className="flex gap-1.5">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400"
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-400 dark:bg-white/50"
             style={{ animationDelay: `${i * 200}ms` }}
           />
         ))}
@@ -77,7 +79,7 @@ export default function DashboardPage() {
   if (!project) {
     return (
       <div className="flex h-96 flex-col items-center justify-center gap-4 text-center">
-        <div className="glass-app flex h-16 w-16 items-center justify-center rounded-2xl">
+        <div className="glass-app-strong ios-specular flex h-16 w-16 items-center justify-center rounded-2xl">
           <FolderOpen className="h-8 w-8 text-zinc-400 dark:text-white/40" />
         </div>
         <div>
@@ -88,7 +90,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/create"
-          className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90"
+          className="ios-btn-primary ios-pressable rounded-full px-6 py-2.5 text-sm font-semibold"
         >
           Create project
         </Link>
@@ -97,16 +99,16 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{project.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{project.name}</h1>
           <a
             href={project.github_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 inline-flex items-center gap-1 text-sm text-zinc-500 dark:text-white/40 transition-colors hover:text-sky-600 dark:hover:text-sky-400"
+            className="mt-1 inline-flex items-center gap-1 text-sm text-zinc-500 dark:text-white/40 transition-colors hover:text-zinc-900 dark:hover:text-white"
           >
             <span className="max-w-xs truncate">{project.github_url}</span>
             <ExternalLink className="h-3 w-3 shrink-0" />
@@ -119,11 +121,11 @@ export default function DashboardPage() {
       <AskQuestionCard projectId={project.id} />
 
       {/* Recent commits */}
-      <div className="glass-app rounded-2xl p-5">
+      <div className="glass-app ios-specular rounded-3xl p-5 sm:p-6">
         <h2 className="mb-4 flex items-center gap-2 font-semibold text-zinc-900 dark:text-white">
           <GitCommit className="h-4 w-4 text-zinc-400 dark:text-white/40" />
           Recent Commits
-          {isLoading && <Loader2 className="ml-1 h-3.5 w-3.5 animate-spin text-white/30" />}
+          {isLoading && <Loader2 className="ml-1 h-3.5 w-3.5 animate-spin text-zinc-400 dark:text-white/30" />}
         </h2>
 
         {isLoading ? (
@@ -140,12 +142,12 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
-                className="glass-app rounded-xl p-3.5"
+                className="glass-app ios-pressable rounded-2xl p-3.5"
               >
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8 shrink-0">
+                  <Avatar className="h-8 w-8 shrink-0 ring-1 ring-black/5 dark:ring-white/10">
                     <AvatarImage src={commit.commit_author_avatar} />
-                    <AvatarFallback className="bg-zinc-800 text-xs text-zinc-300">
+                    <AvatarFallback className="bg-zinc-200 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                       {commit.commit_author_name.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -154,7 +156,7 @@ export default function DashboardPage() {
                       <span className="text-xs font-semibold text-zinc-800 dark:text-white">
                         {commit.commit_author_name}
                       </span>
-                      <Badge variant="outline" className="border-white/10 text-[10px] text-white/40">
+                      <Badge variant="outline" className="border-black/10 font-mono text-[10px] text-zinc-500 dark:border-white/10 dark:text-white/40">
                         {commit.commit_hash.slice(0, 7)}
                       </Badge>
                       <span className="ml-auto text-[10px] text-zinc-500 dark:text-white/25">

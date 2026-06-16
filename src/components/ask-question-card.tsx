@@ -61,7 +61,7 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="glass-app rounded-2xl p-5 flex flex-col gap-4">
+    <div className="glass-app ios-specular rounded-3xl p-5 sm:p-6 flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <Bot className="h-5 w-5 text-zinc-400 dark:text-white/40" />
         <h2 className="font-semibold text-zinc-900 dark:text-white">Ask about this codebase</h2>
@@ -73,7 +73,7 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAsk(); }}
         placeholder="How does the auth flow work?…"
         rows={3}
-        className="w-full resize-none rounded-xl border border-black/10 dark:border-white/8 bg-black/5 dark:bg-white/4 px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none transition-colors focus:border-zinc-400 dark:focus:border-white/30"
+        className="ios-field w-full resize-none rounded-2xl px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none"
       />
 
       <div className="flex items-center justify-between">
@@ -83,7 +83,7 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
         <button
           onClick={handleAsk}
           disabled={loading || !question.trim()}
-          className="flex items-center gap-1.5 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90 disabled:opacity-50"
+          className="ios-btn-primary ios-pressable flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           {loading ? "Thinking…" : "Ask"}
@@ -102,7 +102,7 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
                       {String(children).replace(/\n$/, "")}
                     </SyntaxHighlighter>
                   ) : (
-                    <code className="rounded bg-white/8 px-1 py-0.5 text-xs" {...props}>{children}</code>
+                    <code className="rounded bg-black/8 px-1 py-0.5 text-xs dark:bg-white/10" {...props}>{children}</code>
                   );
                 },
               }}

@@ -19,7 +19,7 @@ export function InviteTeamCard({ projectId }: { projectId: string }) {
   return (
     <button
       onClick={copyLink}
-      className="glass-app flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm text-zinc-600 dark:text-white/50 transition-colors hover:text-zinc-900 dark:hover:text-white"
+      className="glass-app ios-pressable flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-white/60 dark:hover:text-white"
     >
       <Users className="h-4 w-4" />
       Invite team

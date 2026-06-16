@@ -25,27 +25,75 @@
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, monospace;
 
-  /* ── App glass vars (light mode — solid white cards on white bg) ── */
-  --app-glass-bg: #ffffff;
-  --app-glass-border: rgba(0, 0, 0, 0.09);
-  --app-glass-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04);
-  --app-glass-strong-bg: #ffffff;
-  --app-glass-strong-border: rgba(0, 0, 0, 0.10);
-  --app-glass-strong-shadow: 0 4px 16px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(0, 0, 0, 0.06);
-  --app-glass-nav-bg: #ffffff;
-  --app-glass-nav-border: rgba(0, 0, 0, 0.08);
+  /* ── iOS glass — light mode (frosted pearl) ── */
+  /* App canvas: soft neutral pearl so frosted panels actually refract */
+  --app-bg: #eceef1;
+  --app-ambient:
+    radial-gradient(120% 80% at 12% -10%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(120% 90% at 100% 0%, rgba(210, 214, 222, 0.55) 0%, rgba(210, 214, 222, 0) 50%),
+    radial-gradient(140% 120% at 50% 120%, rgba(190, 195, 205, 0.5) 0%, rgba(190, 195, 205, 0) 60%);
+
+  /* Monochrome ink scale */
+  --app-ink: #0c0d0f;
+  --app-ink-soft: rgba(12, 13, 15, 0.62);
+  --app-ink-faint: rgba(12, 13, 15, 0.42);
+
+  --app-glass-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.6) 100%);
+  --app-glass-border: rgba(255, 255, 255, 0.7);
+  --app-glass-ring: rgba(12, 13, 15, 0.07);
+  --app-glass-shadow:
+    0 1px 1px rgba(12, 13, 15, 0.04),
+    0 10px 30px -16px rgba(12, 13, 15, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --app-glass-strong-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.72) 100%);
+  --app-glass-strong-border: rgba(255, 255, 255, 0.85);
+  --app-glass-strong-shadow:
+    0 2px 4px rgba(12, 13, 15, 0.05),
+    0 24px 56px -24px rgba(12, 13, 15, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  --app-glass-nav-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(244, 246, 248, 0.7) 100%);
+  --app-glass-nav-border: rgba(12, 13, 15, 0.07);
+  /* Inset chip/field surface */
+  --app-field-bg: rgba(12, 13, 15, 0.035);
+  --app-field-border: rgba(12, 13, 15, 0.09);
+  /* Primary action (monochrome) */
+  --app-accent: #0c0d0f;
+  --app-accent-fg: #ffffff;
+  --ios-specular-strength: 0.7;
 }
 
-/* ── App glass vars (dark mode — navy-tinted panels on #0a1628 bg) ── */
+/* ── iOS glass — dark mode (graphite frost) ── */
 .dark {
-  --app-glass-bg: rgba(255, 255, 255, 0.05);
-  --app-glass-border: rgba(255, 255, 255, 0.08);
-  --app-glass-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  --app-glass-strong-bg: rgba(255, 255, 255, 0.07);
-  --app-glass-strong-border: rgba(255, 255, 255, 0.10);
-  --app-glass-strong-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --app-glass-nav-bg: rgba(8, 18, 38, 0.98);
+  --app-bg: #0a0a0c;
+  --app-ambient:
+    radial-gradient(110% 75% at 15% -10%, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 50%),
+    radial-gradient(160% 140% at 50% 130%, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 60%);
+
+  --app-ink: #ffffff;
+  --app-ink-soft: rgba(255, 255, 255, 0.64);
+  --app-ink-faint: rgba(255, 255, 255, 0.4);
+
+  --app-glass-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.035) 100%);
+  --app-glass-border: rgba(255, 255, 255, 0.1);
+  --app-glass-ring: rgba(255, 255, 255, 0.06);
+  --app-glass-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.4),
+    0 16px 40px -20px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --app-glass-strong-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --app-glass-strong-border: rgba(255, 255, 255, 0.13);
+  --app-glass-strong-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    0 28px 64px -28px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --app-glass-nav-bg: linear-gradient(180deg, rgba(20, 20, 24, 0.72) 0%, rgba(12, 12, 15, 0.7) 100%);
   --app-glass-nav-border: rgba(255, 255, 255, 0.08);
+  --app-field-bg: rgba(255, 255, 255, 0.045);
+  --app-field-border: rgba(255, 255, 255, 0.1);
+  --app-accent: #ffffff;
+  --app-accent-fg: #0a0a0c;
+  --ios-specular-strength: 0.5;
 }
 
 /* ─── Smooth scrollbar ─── */
@@ -106,28 +154,142 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* ─── App glassmorphism — theme-aware (protected pages only) ─── */
+/* ─── iOS frosted glass — theme-aware (protected pages only) ─── */
+/* The saturate() boost is the classic Apple "vibrancy" recipe: it makes
+   colour bleed through the blur so panels read as real frosted glass. */
 .glass-app {
   background: var(--app-glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
   border: 1px solid var(--app-glass-border);
   box-shadow: var(--app-glass-shadow);
 }
 
 .glass-app-strong {
   background: var(--app-glass-strong-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
   border: 1px solid var(--app-glass-strong-border);
   box-shadow: var(--app-glass-strong-shadow);
 }
 
 .glass-app-nav {
   background: var(--app-glass-nav-bg);
-  backdrop-filter: blur(28px) saturate(1.5);
-  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  backdrop-filter: blur(44px) saturate(190%);
+  -webkit-backdrop-filter: blur(44px) saturate(190%);
   border-color: var(--app-glass-nav-border);
+}
+
+/* ─── App ambient canvas (sits behind frosted panels so they refract) ─── */
+.app-shell {
+  position: relative;
+  background-color: var(--app-bg);
+  isolation: isolate;
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--app-ambient);
+  pointer-events: none;
+}
+
+/* ─── iOS inset field surface (inputs, textareas, chips) ─── */
+.ios-field {
+  background: var(--app-field-bg);
+  border: 1px solid var(--app-field-border);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.ios-field:focus,
+.ios-field:focus-within {
+  border-color: color-mix(in srgb, var(--app-ink) 32%, transparent);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.04),
+    0 0 0 3px color-mix(in srgb, var(--app-ink) 9%, transparent);
+}
+
+/* ─── iOS primary button (monochrome, specular top highlight) ─── */
+.ios-btn-primary {
+  background: var(--app-accent);
+  color: var(--app-accent-fg);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.16),
+    0 8px 20px -8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 color-mix(in srgb, var(--app-accent-fg) 22%, transparent);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ios-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.16),
+    0 12px 28px -8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 color-mix(in srgb, var(--app-accent-fg) 28%, transparent);
+}
+
+.ios-btn-primary:active:not(:disabled) {
+  transform: scale(0.97);
+  filter: brightness(0.96);
+}
+
+/* ─── Pressable micro-interaction (cards, list rows, secondary buttons) ─── */
+.ios-pressable {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.2s ease;
+}
+
+.ios-pressable:hover {
+  transform: translateY(-2px);
+}
+
+.ios-pressable:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* ─── Active nav pill ─── */
+/* Deliberately avoids backdrop-filter + masked pseudo-border: toggling those
+   on each route change causes a 1-frame border flash while the browser
+   re-composites the blur. A plain bg + inset highlight reads just as glassy
+   (it already sits on the frosted sidebar) and switches atomically. */
+.app-nav-active {
+  background: rgba(12, 13, 15, 0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 2px rgba(12, 13, 15, 0.06);
+}
+
+.dark .app-nav-active {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Specular sheen pinned to the top edge — the iOS "lit from above" cue */
+/* :where() keeps specificity at 0 so a Tailwind position utility (fixed/
+   absolute) on the same element always wins — an already-positioned element
+   is its own containing block and doesn't need this relative. */
+:where(.ios-specular) {
+  position: relative;
+}
+
+.ios-specular::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  /* Bright top edge = "lit from above". Invisible on light panels (where the
+     inset highlight already does the job), a crisp sheen on dark glass. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, var(--ios-specular-strength, 0.5)) 0%, transparent 42%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* ─── Gradient text ─── */

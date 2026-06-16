@@ -16,7 +16,7 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-const inputCls = "w-full rounded-xl border border-black/10 dark:border-white/8 bg-black/5 dark:bg-white/4 px-4 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none transition-colors focus:border-zinc-400 dark:focus:border-white/30";
+const inputCls = "ios-field w-full rounded-2xl px-4 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none";
 
 export default function CreatePage() {
   const router = useRouter();
@@ -44,10 +44,10 @@ export default function CreatePage() {
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
-      <div className="glass-app-strong w-full max-w-md rounded-2xl p-8">
+      <div className="glass-app-strong ios-specular w-full max-w-md rounded-3xl p-8">
         <div className="mb-7 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 dark:bg-white">
-            <FolderGit2 className="h-5 w-5 text-white dark:text-black" />
+          <div className="ios-btn-primary flex h-11 w-11 items-center justify-center rounded-2xl">
+            <FolderGit2 className="h-5 w-5" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-zinc-900 dark:text-white">New Project</h1>
@@ -83,7 +83,7 @@ export default function CreatePage() {
           <button
             type="submit"
             disabled={createProject.isPending}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white transition-all hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ios-btn-primary ios-pressable mt-2 flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
             {createProject.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Creating project…</> : "Create project"}
           </button>
