@@ -187,3 +187,11 @@ returns void language sql as $$
   update users set credits = credits + p_amount, updated_at = now()
   where id = p_user_id;
 $$;
+
+-- ----------------------------------------------------------------
+-- Storage: public bucket for meeting audio uploads
+-- (upload-meeting route writes here and serves via getPublicUrl)
+-- ----------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('meetings', 'meetings', true)
+on conflict (id) do nothing;

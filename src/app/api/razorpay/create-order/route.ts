@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import Razorpay from "razorpay";
-import { createAdminSupabase } from "@/lib/supabase";
+import { createAdminSupabase, isConnectionError } from "@/lib/supabase";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -34,13 +34,43 @@ export async function POST(req: NextRequest) {
     });
 
     const supabase = createAdminSupabase();
-    await supabase.from("transactions").insert({
+
+    // Ensure the users row exists before inserting the transaction (FK to
+    // users(id)). The layout's background syncUser() can race with this money
+    // path — especially right after an account switch — so provision inline.
+    const clerkUser = await currentUser();
+    const { error: userError } = await supabase.from("users").upsert(
+      {
+        id: userId,
+        image_url: clerkUser?.imageUrl,
+        first_name: clerkUser?.firstName,
+        last_name: clerkUser?.lastName,
+        email_address: clerkUser?.emailAddresses[0]?.emailAddress ?? "",
+      },
+      { onConflict: "id" },
+    );
+    if (userError) {
+      console.error("create-order: failed to provision user:", userError);
+      if (isConnectionError(userError)) {
+        return NextResponse.json(
+          { error: "Database unreachable. Please try again shortly." },
+          { status: 503 },
+        );
+      }
+      return NextResponse.json({ error: "Failed to provision user" }, { status: 500 });
+    }
+
+    const { error: insertError } = await supabase.from("transactions").insert({
       user_id: userId,
       razorpay_order_id: order.id,
       amount: amountInPaise,
       credits,
       status: "PENDING",
     });
+    if (insertError) {
+      console.error("create-order: failed to record transaction:", insertError);
+      return NextResponse.json({ error: "Failed to record transaction" }, { status: 500 });
+    }
 
     return NextResponse.json({ orderId: order.id, amount: amountInPaise, credits });
   } catch (err) {

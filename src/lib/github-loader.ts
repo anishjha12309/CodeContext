@@ -248,34 +248,47 @@ export async function indexGithubRepo(
   let indexed = 0;
   let failed = 0;
 
-  // Insert records first (without embedding vector)
-  const rows = embeddings.map(({ embedding: _vec, ...rest }) => rest);
+  // Insert one row at a time. A single bulk insert ships every file's source in
+  // one large POST, which Supabase's Cloudflare WAF can flag as malicious
+  // (code often contains SQLi/XSS-like patterns) and block the whole batch.
+  // Per-row inserts keep payloads small and isolate any file the WAF rejects.
+  // Supabase's Cloudflare WAF returns an HTML block page (not a Postgres error)
+  // when a row's source_code matches an attack signature (common in HTML/JS).
+  const isWafBlock = (msg?: string) =>
+    !!msg && (msg.includes("<!DOCTYPE html") || msg.toLowerCase().includes("cloudflare"));
 
-  const { data: inserted, error: insertErr } = await supabase
-    .from("source_code_embeddings")
-    .insert(rows)
-    .select("id, file_name");
+  for (const { embedding, ...row } of embeddings) {
+    let { data: inserted, error: insertErr } = await supabase
+      .from("source_code_embeddings")
+      .insert(row)
+      .select("id")
+      .single();
 
-  if (insertErr) {
-    console.error("Bulk insert failed:", insertErr.message);
-    return { indexed: 0, failed: embeddings.length };
-  }
+    // If the WAF blocked this file, retry with truncated source so the row
+    // (and its searchable summary + embedding) still gets indexed.
+    if ((insertErr || !inserted) && isWafBlock(insertErr?.message)) {
+      console.warn(`⚠ WAF blocked ${row.file_name}; retrying with truncated source`);
+      ({ data: inserted, error: insertErr } = await supabase
+        .from("source_code_embeddings")
+        .insert({ ...row, source_code: row.source_code.slice(0, 500) })
+        .select("id")
+        .single());
+    }
 
-  // Update each row with its vector using raw SQL via RPC
-  for (const record of inserted ?? []) {
-    const entry = embeddings.find(
-      (e) => sanitize(e.file_name) === record.file_name,
-    );
-    if (!entry) { failed++; continue; }
+    if (insertErr || !inserted) {
+      failed++;
+      console.error(`✗ Insert failed for ${row.file_name}:`, insertErr?.message?.slice(0, 200));
+      continue;
+    }
 
     const { error } = await supabase.rpc("set_embedding", {
-      p_id: record.id,
-      p_embedding: `[${entry.embedding.join(",")}]`,
+      p_id: inserted.id,
+      p_embedding: `[${embedding.join(",")}]`,
     });
 
     if (error) {
       failed++;
-      console.error(`✗ Vector update failed for ${record.file_name}:`, error.message);
+      console.error(`✗ Vector update failed for ${row.file_name}:`, error.message);
     } else {
       indexed++;
     }

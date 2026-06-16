@@ -65,7 +65,7 @@ export default function DashboardPage() {
 
   const { data: commits, isLoading } = api.project.getCommits.useQuery(
     { projectId },
-    { enabled: !!projectId, refetchInterval: 10000 },
+    { enabled: !!project, refetchInterval: 10000 },
   );
 
   useEffect(() => {

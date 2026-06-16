@@ -28,6 +28,11 @@ export default function BillingPage() {
     setLoading(pkg.amount);
     try {
       const res = await fetch("/api/razorpay/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: pkg.amount }) });
+      if (!res.ok) {
+        const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(error ?? "Failed to create order.");
+        return;
+      }
       const { orderId, amount } = (await res.json()) as { orderId: string; amount: number };
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
