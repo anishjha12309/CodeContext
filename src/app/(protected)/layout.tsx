@@ -157,6 +157,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                         setProjectId(p.id);
                         setProjectsOpen(false);
                         onClose?.();
+                        // Always land on the project's dashboard so picking a
+                        // project is a clear navigation — even from another page
+                        // (e.g. Meetings) or when re-selecting the active one.
+                        router.push("/dashboard");
                       }}
                       className={cn(
                         "flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all",
@@ -241,7 +245,7 @@ export default function ProtectedLayout({
   }, []);
 
   return (
-    <div className="app-shell flex min-h-screen">
+    <div className="app-shell flex min-h-screen overflow-x-clip">
 
       {/* Desktop sidebar */}
       <aside className="glass-app-nav fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-black/8 lg:flex dark:border-white/8">
@@ -293,7 +297,7 @@ export default function ProtectedLayout({
       </div>
 
       {/* Main content */}
-      <main className="flex-1 pt-14 lg:ml-64 lg:pt-0">
+      <main className="min-w-0 flex-1 overflow-x-clip pt-14 lg:ml-64 lg:pt-0">
         <div className="min-h-screen p-4 sm:p-6 lg:p-8">{children}</div>
       </main>
     </div>

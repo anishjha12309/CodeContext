@@ -1,11 +1,16 @@
-// Code summarisation using Cerebras (llama-4-scout). Fast and cheap on the free tier.
+// Code summarisation using Cerebras (gpt-oss-120b). Fast and cheap, used for
+// high-volume code summarization that feeds the embeddings/semantic search.
 import { createCerebras } from "@ai-sdk/cerebras";
 import { generateText } from "ai";
 
-// Cerebras: 60-100K TPM, 1M tokens/day free — used for high-volume code summarization
-// Context cap on free tier: 8,192 tokens → truncate input to ~5,000 chars per file
+// gpt-oss-120b has a 128K context window (vs the old llama-4-scout's 8K cap),
+// so we can pass much more of each file. Its light default reasoning returns a
+// concise summary quickly; no reasoningEffort override (low effort showed
+// erratic latency). Cap input to keep per-call token cost/latency bounded —
+// the loader already filters files to <= 50K chars.
 const cerebras = createCerebras({ apiKey: process.env.CEREBRAS_API_KEY! });
-const CEREBRAS_MODEL = "llama-4-scout-17b-16e-instruct";
+const CEREBRAS_MODEL = "gpt-oss-120b";
+const MAX_CODE_CHARS = 20_000;
 
 export async function summariseCode(
   fileName: string,
@@ -18,10 +23,14 @@ export async function summariseCode(
 Explain the purpose of "${fileName}" in max 80 words. Be concise and specific.
 
 Code:
-${code.slice(0, 5000)}`,
+${code.slice(0, MAX_CODE_CHARS)}`,
     });
     return text.trim();
-  } catch {
+  } catch (err) {
+    // Stay resilient — one bad file shouldn't fail the batch — but log so a
+    // systemic problem (bad key, model removed, quota) is visible in the logs
+    // instead of silently producing empty summaries.
+    console.error(`✗ Cerebras summary failed for ${fileName}:`, err instanceof Error ? err.message : err);
     return "";
   }
 }
@@ -29,9 +38,8 @@ ${code.slice(0, 5000)}`,
 export async function batchSummariseCode(
   files: Array<{ fileName: string; code: string }>,
 ): Promise<string[]> {
-  // Process individually — Cerebras free tier has 8K context cap,
-  // so we can't batch many large files into one prompt.
-  // But at 60-100K TPM we can fire these in parallel safely.
+  // Process individually so one large file can't blow a shared context window,
+  // and fire them in parallel — Cerebras' high TPM handles the concurrency.
   const results = await Promise.all(
     files.map((f) => summariseCode(f.fileName, f.code)),
   );

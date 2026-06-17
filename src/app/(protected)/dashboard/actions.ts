@@ -55,9 +55,12 @@ export async function askQuestion(question: string, projectId: string) {
     return { output: stream.value, filesReferences: [] };
   }
 
+  // gemini-embedding-001 produces low absolute cosine scores — even strongly
+  // relevant files land around 0.55-0.60 — so a 0.5 cutoff filters out valid
+  // matches. Use a low threshold and let match_count cap to the top results.
   const { data: results } = await supabase.rpc("match_source_code", {
     query_embedding: queryVector,
-    match_threshold: 0.5,
+    match_threshold: 0.3,
     match_count: 10,
     p_project_id: projectId,
   });
@@ -69,6 +72,22 @@ export async function askQuestion(question: string, projectId: string) {
     summary: string;
     similarity: number;
   }>;
+
+  // No indexed code matched — answering would just produce a generic "no
+  // context" reply while still spending a credit and Groq tokens. Refund the
+  // credit and explain instead (most commonly: indexing hasn't finished, or an
+  // un-indexed project is selected).
+  if (filesReferences.length === 0) {
+    await supabase.rpc("increment_credits", {
+      p_user_id: userId,
+      p_amount: CREDITS_PER_QUESTION,
+    });
+    stream.update(
+      "I couldn't find any indexed code for this project yet. If you just created it, indexing may still be running (it can take a few minutes for large repos). Otherwise, make sure an indexed project is selected. Your credit was not charged.",
+    );
+    stream.done();
+    return { output: stream.value, filesReferences: [] };
+  }
 
   const context = filesReferences
     .map(

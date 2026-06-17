@@ -3,6 +3,11 @@ import { type NextRequest } from "next/server";
 import { appRouter } from "@/server/api/root";
 import { createTRPCContext } from "@/server/api/trpc";
 
+// Allow background work scheduled via `after()` (e.g. repo indexing on
+// createProject) to keep running after the response. Vercel clamps this to the
+// deployment plan's max (e.g. 60s Hobby, up to 300s Pro).
+export const maxDuration = 300;
+
 const handler = (req: NextRequest) =>
   fetchRequestHandler({
     endpoint: "/api/trpc",

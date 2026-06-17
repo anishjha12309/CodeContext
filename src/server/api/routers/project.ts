@@ -1,6 +1,7 @@
 // tRPC router for all project operations — CRUD, Q&A, commits, meetings, and billing.
 // All procedures run as admin Supabase but scope reads/writes to ctx.userId.
 import { z } from "zod";
+import { after } from "next/server";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { pollCommits } from "@/lib/github";
@@ -86,11 +87,20 @@ export const projectRouter = createTRPCRouter({
         .from("user_to_projects")
         .insert({ user_id: ctx.userId, project_id: project.id });
 
-      // Index and poll in parallel (fire-and-forget — long running)
-      void Promise.all([
-        indexGithubRepo(project.id, input.githubUrl, input.githubToken),
-        pollCommits(project.id),
-      ]).catch(console.error);
+      // Index code + poll commits in the background. `after()` keeps the
+      // serverless function alive until this resolves (up to the route's
+      // maxDuration). A bare `void promise` would be killed the instant the
+      // response is sent on Vercel, leaving the repo stuck on "Indexing…".
+      after(async () => {
+        try {
+          await Promise.all([
+            indexGithubRepo(project.id, input.githubUrl, input.githubToken),
+            pollCommits(project.id),
+          ]);
+        } catch (err) {
+          console.error("Background indexing failed:", err);
+        }
+      });
 
       return project;
     }),
