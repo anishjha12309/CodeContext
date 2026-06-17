@@ -1,7 +1,7 @@
 // Walks a GitHub repo tree, summarises each file via Cerebras, generates embeddings
 // via Gemini, and stores everything in Supabase for semantic search.
 import { Octokit } from "octokit";
-import { batchSummariseCode } from "./cerebras";
+import { summariseFiles, PER_FILE_CHARS } from "./cerebras";
 import { generateEmbedding } from "./gemini";
 import { createAdminSupabase } from "./supabase";
 
@@ -73,7 +73,10 @@ async function withRetry<T>(fn: () => Promise<T>, label = ""): Promise<T | null>
     try {
       return await fn();
     } catch (err: any) {
-      const is429 = err?.message?.includes("429") || err?.message?.includes("quota");
+      const msg = String(err?.message ?? "");
+      const is429 =
+        err?.statusCode === 429 ||
+        /429|quota|rate.?limit|too many requests|queue_exceeded/i.test(msg);
       if (is429 && attempt < 3) {
         await delay(attempt * 5000);
       } else {
@@ -160,43 +163,61 @@ export async function indexGithubRepo(
 
   console.log(`✓ Fetched ${fetched.length} files`);
 
-  // ── PHASE 2: Generate summaries via Cerebras (parallel, high TPM) ──
+  // ── PHASE 2: Generate summaries via Cerebras (multi-file requests, paced) ──
   console.log("\n🤖 Phase 2: Generating summaries via Cerebras…");
 
-  // Cerebras free tier: 8K context, 60-100K TPM → process in parallel batches
-  const SUMMARY_BATCH = 10;
+  // Cerebras free tier: 5 requests/min, 30K tokens/min. We pack several files
+  // into ONE request (gpt-oss-120b has a 128K context) and space requests apart
+  // so we stay under both limits. One request per file would blow past 5 RPM.
+  const BATCH_CHAR_BUDGET = 18_000; // ≈4.5K input tokens/request (well under 30K TPM)
+  const MAX_FILES_PER_BATCH = 10; // keep each request's output parseable
+  const REQUEST_INTERVAL_MS = 13_000; // ≤5 requests/min
+
+  // Pack files greedily into batches bounded by combined (capped) source size.
+  const batches: FileEntry[][] = [];
+  let current: FileEntry[] = [];
+  let currentChars = 0;
+  for (const file of fetched) {
+    const size = Math.min(file.content.length, PER_FILE_CHARS);
+    const full =
+      current.length >= MAX_FILES_PER_BATCH ||
+      currentChars + size > BATCH_CHAR_BUDGET;
+    if (current.length > 0 && full) {
+      batches.push(current);
+      current = [];
+      currentChars = 0;
+    }
+    current.push(file);
+    currentChars += size;
+  }
+  if (current.length > 0) batches.push(current);
+
   const summaries: Array<{ path: string; content: string; summary: string }> = [];
 
-  for (let i = 0; i < fetched.length; i += SUMMARY_BATCH) {
-    const batch = fetched.slice(i, i + SUMMARY_BATCH);
-    const batchNum = Math.floor(i / SUMMARY_BATCH) + 1;
-    const total = Math.ceil(fetched.length / SUMMARY_BATCH);
-    console.log(`  Batch ${batchNum}/${total}: ${batch.length} files`);
+  for (let b = 0; b < batches.length; b++) {
+    const batch = batches[b]!;
+    console.log(`  Request ${b + 1}/${batches.length}: ${batch.length} files`);
 
     const results = await withRetry(
-      () =>
-        batchSummariseCode(
-          batch.map((f) => ({ fileName: f.path, code: f.content })),
-        ),
-      `Summary batch ${batchNum}`,
+      () => summariseFiles(batch.map((f) => ({ fileName: f.path, code: f.content }))),
+      `Summary request ${b + 1}`,
     );
 
-    if (results) {
-      for (let j = 0; j < batch.length; j++) {
-        const file = batch[j]!;
-        summaries.push({
-          path: file.path,
-          content: file.content,
-          summary: results[j] ?? "",
-        });
-      }
+    for (let j = 0; j < batch.length; j++) {
+      const file = batch[j]!;
+      summaries.push({
+        path: file.path,
+        content: file.content,
+        summary: results?.[j] ?? "",
+      });
     }
 
-    // Small delay to avoid bursting Cerebras
-    if (i + SUMMARY_BATCH < fetched.length) await delay(1000);
+    // Pace requests to respect the 5 RPM / 30K TPM free-tier limits.
+    if (b < batches.length - 1) await delay(REQUEST_INTERVAL_MS);
   }
 
-  console.log(`✓ ${summaries.length} summaries generated`);
+  const summarised = summaries.filter((s) => s.summary).length;
+  console.log(`✓ ${summarised}/${summaries.length} files summarised (${batches.length} requests)`);
 
   // ── PHASE 3: Generate embeddings via Gemini (batches of 25, 1500 RPM) ──
   console.log("\n🔢 Phase 3: Generating embeddings via Gemini…");

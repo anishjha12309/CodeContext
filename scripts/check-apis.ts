@@ -9,7 +9,7 @@
  * the free /rate_limit endpoint which does NOT consume quota.
  */
 import { generateEmbedding } from "../src/lib/gemini";
-import { summariseCode } from "../src/lib/cerebras";
+import { summariseFiles } from "../src/lib/cerebras";
 import { summariseCommit } from "../src/lib/groq";
 
 type Result = { name: string; status: string; detail: string };
@@ -82,10 +82,9 @@ async function checkGemini() {
 
 async function checkCerebras() {
   try {
-    // summariseCode swallows errors and returns "" — so probe and flag empties.
-    const out = await summariseCode("test.ts", "export const x = 1;");
+    const [out] = await summariseFiles([{ fileName: "test.ts", code: "export const x = 1;" }]);
     if (!out) {
-      results.push({ name: "Cerebras (code summaries)", status: "⚠️  EMPTY", detail: "returned empty string — likely rate-limited/erroring (errors are swallowed in cerebras.ts)" });
+      results.push({ name: "Cerebras (code summaries)", status: "⚠️  EMPTY", detail: "returned empty summary — model responded but parsing produced nothing" });
     } else {
       results.push({ name: "Cerebras (code summaries)", status: "✅ OK", detail: `responded: "${out.slice(0, 50)}…"` });
     }
