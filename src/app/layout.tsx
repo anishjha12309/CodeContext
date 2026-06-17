@@ -1,5 +1,5 @@
 import "./globals.css";
-import { type Metadata } from "next";
+import { type Metadata, type Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { TRPCReactProvider } from "@/trpc/react";
 import { ToasterWithTheme } from "@/components/toaster-with-theme";
@@ -23,6 +23,12 @@ const robotoMono = Roboto_Mono({
   variable: "--font-mono",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "CodeContext",

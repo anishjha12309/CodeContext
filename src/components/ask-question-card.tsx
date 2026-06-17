@@ -73,7 +73,7 @@ export function AskQuestionCard({ projectId }: { projectId: string }) {
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAsk(); }}
         placeholder="How does the auth flow work?…"
         rows={3}
-        className="ios-field w-full resize-none rounded-2xl px-4 py-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none"
+        className="ios-field w-full resize-none rounded-2xl px-4 py-3 text-base sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-white/25 outline-none"
       />
 
       <div className="flex items-center justify-between">

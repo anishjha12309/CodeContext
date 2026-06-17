@@ -151,6 +151,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                   <div key={p.id} className="group flex items-center gap-1">
                     <button
                       onClick={() => {
+                        if (p.id === projectId) {
+                          void refetch();
+                        }
                         setProjectId(p.id);
                         setProjectsOpen(false);
                         onClose?.();
